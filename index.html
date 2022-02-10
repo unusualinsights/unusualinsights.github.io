@@ -10,12 +10,13 @@
   <body>
     <div class="sidenav">
       <a href="#home">Top</a><br>
-      <a href="#background">Background</a><br>
+      <a href="#Background">Background</a><br>
+      <a href="#What_to_Install">What to Install</a><br>
     </div>
     <div class="thetext">
       <h1 id="home">Physics-Based Simulation &amp; Animation of Fluids</h1>
       <p>Do you ever wonder how special effects using fluids like water are animated for movies? In this tutorial, we'll show you how to simulate fluids using the popular Fluid-Implicit-Particle / Particle-in-Cell (FLIP/PIC) method.</p>
-      <h1 id="background">Background</h1>
+      <h1 id="Background">Background</h1>
       <p>This tutorial is designed assuming a year or two of experience in or exposure to:
       <ul>
         <li>Computer programming in C++</li>
@@ -24,6 +25,62 @@
         <li>Calculus: differential, integral, and vector calculus</li>
       </ul></p>
       <p>Some exposure to computer graphics helps but is certainly not required. If you're a second- or third-year computer science college student, you have more than enough background! If you haven't gone to college, haven't studied computer science, don't remember much math or physics, or this list just feels overwhelming in general, that's okay! Feel free to follow along and look up and/or skip lots of things! You don't have to understand everything, by any means, to gain something from this tutorial. Other than access to a computer (yes, this can be a challenge) and at least an occasional Internet connection, everything else this tutorial is freely available!</p>
+      <h1 id="What_to_Install">What to Install</h1>
+      <p>This tutorial will use the C++ programming language. We will use the Open Graphics Library (OpenGL) and the associated OpenGL Utility Toolkit (GLUT) to display graphics on the computer screen. This is freely available software widely used for displaying graphics on computer screens.</p>
+      <p>From this point onward, I'll assume you're using a computer running Ubuntu 16.04 or 18.04. I'll also assume your computer account has permission to install new software on that computer, or if not, that someone else can do it for you. If you're running another operating system, such as Windows or macOS, you should be able to follow along but with some small changes to commands and the code.</p>
+      <p>Open a Terminal (CTRL+ALT+T on Ubuntu). Type this command and then press Enter to run it:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>sudo apt install freeglut3-dev</pre>
+        </div>
+      </div>
+      <p>If you're asked to, enter your password and press Enter. Once the computer finishes installing OpenGL and GLUT, figure out <i>where</i> it was installed. I found this out by typing something like <code>ls /usr/lib/x86_64-linux-gnu/libgl*</code> and pressing the [TAB] key twice, causing the Terminal to list a whole bunch of files with names starting with <code>libgl</code>something including <code>libglut.</code>something. So, my OpenGL and GLUT libraries were installed in <code>/usr/lib/x86_64-linux-gnu/</code>. Feel free to search online for how to find where OpenGL and GLUT were installed on your computer if you're not sure.</p>
+      <p>This is not required but I highly recommend installing <code>clang-format</code>, a program used by many software developers in industry to format their code in a consistent style. We'll use this program to format our code in Google's style. To install it, run this command in a Terminal and press Enter:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>sudo apt install clang-format-10</pre>
+        </div>
+      </div>
+      <p>It's okay to use another version of this program; I just happen to be using version 10 at the moment.</p>
+      <p>Now, create a directory (folder) somewhere on your computer where you want to store all the code you write as part of this tutorial. You can and will make multiple subdirectories in there as the tutorial proceeds, but it's good to have one parent directory that holds everything. <code>cd</code> to that parent directory in a Terminal window. Then type this command and press Enter:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>clang-format-10 -style=Google -dump-config &gt; .clang-format</pre>
+        </div>
+      </div>
+      <p>This creates a "hidden" file (meaning you can see it by running the <code>ls -a</code> command, but not the plain <code>ls</code> command) in this directory that contains your default settings consistent with the Google style for the <code>clang-format</code> program. If you want to keep your code in multiple disparate places on your computer, you can just re-run this command in each of those directories.</p>
+      <h1 id="Viewing_Geometry_Using_OpenGL">Viewing Geometry Using OpenGL</h1>
+      <p>OpenGL is a general framework that allows us to do graphics programming. To use it to display geometry effectively, we need to set up some initial working code and understand a bit about how OpenGL code manages what we see on the screen.</p>
+      <h2 id="Hello_Sphere">Hello, Sphere!</h2>
+      <p>Our first program will be a single file containing code in the C++ programming language. When we run this program, if everything is working, a window will pop up on the computer screen displaying a single, red, boring sphere. It's so boring, in fact, that it won't even look three-dimensional: it'll just look like a filled-in red circle.</p>
+      <p>Make a directory called <code>basic</code> inside the directory that'll house all your code for this tutorial. Okay, you can put this directory anywhere, but this will just make it less work for you to run <code>clang-format</code> on your code and keep it organized the same way as this tutorial's code. In that directory, create a file called <code>HelloSphere.cpp</code>. You can copy the code from my <a href="">HelloSphere.cpp (actual link coming soon!!)</a> file and save it. Or you can just download the file directly from this link. I put a lot of comments in the file explaining what the code does. If you want to learn more details about how OpenGL and GLUT work, you can find plenty of documentation via online search.</p>
+      <p>In a Terminal, <code>cd</code> to the directory containing this <code>HelloSphere.cpp</code> file. Then run this command:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>clang-format-10 -style=file -i HelloSphere.cpp</pre>
+        </div>
+      </div>
+      <p>Congratulations! Your C++ code is now formatted according to Google's standards! Well, at least the standards a computer can follow automatically. Now, let's compile your code with this command:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ HelloSphere.cpp -o HelloSphere -L/usr/lib/x86_64-linux-gnu/ -lGL -lglut -lGLU</pre>
+        </div>
+      </div>
+      <p>If it compiled with no errors or warnings, let's run the program! Run it with this command:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>./HelloSphere</pre>
+        </div>
+      </div>
+      <p>You should see a window pop up on your screen that looks something like this:</p>
+      <p><img src="HelloSphere.png" class="centeropengl"></img></p>
+      <p>Here are a couple sources that I think illustrate nicely how to create simple OpenGL programs from scratch:</p>
+      <ul>
+        <li><a href="https://stackoverflow.com/questions/23092055/how-to-display-a-sphere-correctly-in-opengl">StackOverflow example on displaying a sphere in OpenGL</a></li>
+        <li><a href="https://ogldev.org/www/tutorial01/tutorial01.html">First tutorial from the OpenGL Step by Step series</a></li>
+      </ul>
+      <p>It's exciting to get our first program working. But the geometry I claimed was 3D just looks like a boring red disc (filled-in circle). How can we make it "look" 3d?</p>
+      <h2 id="Hello_Shaded_Sphere">Hello, Shaded Sphere!</h2>
     </div>
   </body>
 </html>
