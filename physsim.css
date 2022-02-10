@@ -137,5 +137,5 @@ a {
 @media screen and (max-height: 450px) {
   .sidenav {padding-top: 15px;}
   .sidenav a {font-size: 18px;}
-  .thetext {margin-right: 5%;}
+  .thetext {width: 75%; margin-right: 5%;}
 }
