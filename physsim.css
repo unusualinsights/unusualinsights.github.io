@@ -1,0 +1,140 @@
+h1 {
+  font-family: "Arial Narrow", Arial, sans-serif;
+  font-weight: bold;
+  color: black;
+  margin-top: 10%;
+}
+
+h2 {
+  font-family: "Arial Narrow", Arial, sans-serif;
+  font-weight: normal;
+  color: black;
+}
+
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 10px; 
+  border: 2px solid #777777;
+  width: 100%;
+}
+
+.centeropengl {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 10px; 
+  border: 2px solid #777777;
+}
+
+.oneline {
+  overflow-x: scroll;
+  overflow-y: hidden;
+}
+
+.outer {
+  overflow: hidden;
+  border-radius: 25px;
+  border: 2px solid #777777;
+  padding: 20px;
+  background: #EEEEEE;
+  font-family: monospace;
+  font-size: 16px;
+}
+
+.inner {
+  overflow-y: auto;
+}
+
+#code {
+  border-radius: 25px;
+  border: 2px solid #777777;
+  padding: 20px;
+  background: #EEEEEE;
+  font-family: monospace;
+  font-size: 16px;
+}
+
+p {
+  font-family: Verdana, Arial, sans-serif;
+  font-weight: normal;
+  color: black;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+li {
+  font-family: Verdana, Arial, sans-serif;
+  font-weight: normal;
+  color: black;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+code {
+  font-size: 15px;
+  background-color: #EEEEEE;
+}
+
+.thetext {
+  margin-top: 20%;
+  margin-left: 20%;
+  margin-right: 20%;
+  margin-bottom: 10%;
+}
+
+a {
+  color: #4169E1;
+}
+
+.sidenav {
+  height: 100%;
+  width: 15%;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #DDEEFF;
+  overflow-x: hidden;
+  padding-top: 20px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+#rounded {
+  border-radius: 25px;
+  border: 2px solid #4169E1;
+  padding: 20px;
+  background: #EEF7FF;
+}
+
+.sidenav a {
+  text-decoration: none;
+  font-size: 14px;
+  color: #4169E1;
+  font-weight: normal;
+  font-family: Verdana, Arial, sans-serif;
+}
+
+.sidenav ul {
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  list-style-type: circle;
+  padding-left: 10%;
+}
+
+.sidenav li {
+  text-align: left;
+}
+
+.sidenav a:hover {
+  font-weight: bold;
+}
+
+@media screen and (max-height: 450px) {
+  .sidenav {padding-top: 15px;}
+  .sidenav a {font-size: 18px;}
+}
