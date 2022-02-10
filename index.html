@@ -12,6 +12,11 @@
       <a href="#home">Top</a><br>
       <a href="#Background">Background</a><br>
       <a href="#What_to_Install">What to Install</a><br>
+      <a href="#Viewing_Geometry_Using_OpenGL">Viewing Geometry Using OpenGL</a><br>
+      <ul>
+        <li><a href="#Hello_Sphere">Hello, Sphere!</a></li>
+        <li><a href="#Hello_Shaded_Sphere">Hello, Shaded Sphere!</a></li>
+      </ul>
     </div>
     <div class="thetext">
       <h1 id="home">Physics-Based Simulation &amp; Animation of Fluids</h1>
@@ -28,7 +33,14 @@
       <h1 id="What_to_Install">What to Install</h1>
       <p>This tutorial will use the C++ programming language. We will use the Open Graphics Library (OpenGL) and the associated OpenGL Utility Toolkit (GLUT) to display graphics on the computer screen. This is freely available software widely used for displaying graphics on computer screens.</p>
       <p>From this point onward, I'll assume you're using a computer running Ubuntu 16.04 or 18.04. I'll also assume your computer account has permission to install new software on that computer, or if not, that someone else can do it for you. If you're running another operating system, such as Windows or macOS, you should be able to follow along but with some small changes to commands and the code.</p>
-      <p>Open a Terminal (CTRL+ALT+T on Ubuntu). Type this command and then press Enter to run it:</p>
+      <p>Open a Terminal (CTRL+ALT+T on Ubuntu). Type this command and press Enter:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ --version</pre>
+        </div>
+      </div>
+      <p>You should see some text showing the version of <code>g++</code>, the program we'll use to compile our code, that is installed on your computer. If not, look up how to install it. For our purposes, which version of the compiler you install should matter much.</p>
+      <p>Next, in a Terminal (the same one as before is fine!), type this command and then press Enter to run it:</p>
       <div class="outer">
         <div class="inner">
           <pre>sudo apt install freeglut3-dev</pre>
