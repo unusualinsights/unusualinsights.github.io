@@ -65,14 +65,14 @@
       <p>OpenGL is a general framework that allows us to do graphics programming. To use it to display geometry effectively, we need to set up some initial working code and understand a bit about how OpenGL code manages what we see on the screen.</p>
       <h2 id="Hello_Sphere">Hello, Sphere!</h2>
       <p>Our first program will be a single file containing code in the C++ programming language. When we run this program, if everything is working, a window will pop up on the computer screen displaying a single, red, boring sphere. It's so boring, in fact, that it won't even look three-dimensional: it'll just look like a filled-in red circle.</p>
-      <p>Make a directory called <code>basic</code> inside the directory that'll house all your code for this tutorial. Okay, you can put this directory anywhere, but this will just make it less work for you to run <code>clang-format</code> on your code and keep it organized the same way as this tutorial's code. In that directory, create a file called <code>HelloSphere.cpp</code>. You can copy the code from my <a href="">HelloSphere.cpp (actual link coming soon!!)</a> file and save it. Or you can just download the file directly from this link. I put a lot of comments in the file explaining what the code does. If you want to learn more details about how OpenGL and GLUT work, you can find plenty of documentation via online search.</p>
+      <p>Make a directory called <code>basic</code> inside the directory that'll house all your code for this tutorial. Okay, you can put this directory anywhere, but this will just make it less work for you to run <code>clang-format</code> on your code and keep it organized the same way as this tutorial's code. In that directory, create a file called <code>HelloSphere.cpp</code>. You can copy the code from my <a href="code/basic/HelloSphere.cpp">HelloSphere.cpp</a> file and save it. Or you can just download the file directly from this link. I put a lot of comments in the file explaining what the code does. If you want to learn more details about how OpenGL and GLUT work, you can find plenty of documentation via online search.</p>
       <p>In a Terminal, <code>cd</code> to the directory containing this <code>HelloSphere.cpp</code> file. Then run this command:</p>
       <div class="outer">
         <div class="inner">
           <pre>clang-format-10 -style=file -i HelloSphere.cpp</pre>
         </div>
       </div>
-      <p>Congratulations! Your C++ code is now formatted according to Google's standards! Well, at least the standards a computer can follow automatically. Now, let's compile your code with this command:</p>
+      <p>Congratulations! Your C++ code is now formatted according to Google's standards! Well, at least it's formatted to the standards a computer can follow automatically. Now, let's compile your code with this command:</p>
       <div class="outer">
         <div class="inner">
           <pre>g++ HelloSphere.cpp -o HelloSphere -L/usr/lib/x86_64-linux-gnu/ -lGL -lglut -lGLU</pre>
@@ -91,7 +91,7 @@
         <li><a href="https://stackoverflow.com/questions/23092055/how-to-display-a-sphere-correctly-in-opengl">StackOverflow example on displaying a sphere in OpenGL</a></li>
         <li><a href="https://ogldev.org/www/tutorial01/tutorial01.html">First tutorial from the OpenGL Step by Step series</a></li>
       </ul>
-      <p>It's exciting to get our first program working. But the geometry I claimed was 3D just looks like a boring red disc (filled-in circle). How can we make it "look" 3d?</p>
+      <p>It's exciting to get our first program working. But the geometry I claimed was 3D just looks like a boring red disc (filled-in circle). How can we make it <i>look</i> 3D?</p>
       <h2 id="Hello_Shaded_Sphere">Hello, Shaded Sphere!</h2>
     </div>
   </body>
