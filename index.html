@@ -23,6 +23,15 @@
       <ul>
         <li><a href="#Mathematical_Model_of_a_Massless_Sizeless_Particle">Mathematical Model of a Massless, Sizeless Particle</a></li>
         <li><a href="#Simulating_a_Massless_Sizeless_Particle">Simulating a Massless, Sizeless Particle</a></li>
+        <li><a href="#Model_of_Massless_Sizeless_Particle_In_Velocity_Field">Mathematical Model of a Massless, Sizeless Particle in a Velocity Field</a></li>
+        <li><a href="#Simulating_Massless_Sizeless_Particle_in_Velocity_Field">Simulating a Massless, Sizeless Particle in a Velocity Field</a></li>
+      </ul>
+      <a href="#A_Particle_with_Mass">A Particle with Mass</a><br>
+      <ul>
+        <li><a href="#Mathematical_Model_of_Particle_with_Mass">Mathematical Model of a Particle with Mass</a></li>
+        <li><a href="#Simulating_Particle_with_Mass">Simulating a Particle with Mass</a></li>
+        <li><a href="#Mathematical_Model_of_Particles_with_Mass_Size_and_Multiple_Forces">Mathematical Model of Particles with Mass, Size, and Multiple Forces</a></li>
+        <li><a href="#Simulating_Colliding_Particles_with_Mass_and_Size">Simulating Colliding Particles with Mass and Size</a></li>
       </ul>
     </div>
     <div class="thetext">
@@ -203,6 +212,45 @@
       <h2 id="Simulating_a_Massless_Sizeless_Particle">Simulating a Massless, Sizeless Particle</h2>
       <p>Despite a massless, sizeless particle essentially being an invisible object, we will represent such a particle conceptually as a sphere with a nonzero radius so we can, well, actually see it as it moves around on the screen. Yes, the sphere is just a visual aid for us to see where the particle is located in space as it moves. The particle itself, according to our theoretical model here, is infinitely small. We don't really need to assume the particle is infinitely small, but I just do it anyway since we haven't yet defined a particle to be anything other than a point moving around in space over time. It'll make more sense to talk about particle-like objects that have some nonzero size when we start looking at objects interacting with other things in the scene.</p>
       <p>Let's start by making a sphere move around the window. The infinitely small point at the center of the sphere will represent a theoretical massless, sizeless particle's position as it moves around the window. Let's make a particle whose <i>x</i> and <i>y</i> coordinates change as a function of time. Let's have the particle's position (i.e., the position of the center of the sphere representing the particle) be at <b>x</b>(<i>t</i>) = (<i>x</i>(<i>t</i>), <i>y</i>(<i>t</i>), 0) where <i>x</i>(<i>t</i>) = 0.5 cos <i>t</i> and <i>y</i>(<i>t</i>) = 0.5 sin <i>t</i>, where <i>t</i> is the amount of time, measured in seconds, that the program has been running. Basically, this will cause the particle to move counterclockwise along a circle of radius 0.5 about the origin of the coordinate system shown above. Here is the code, in a new file called <a href="https://github.com/unusualinsights/phys_sim_examples/blob/main/basic/MovingParticle.cpp"><code>MovingParticle.cpp</code></a>.</p>
+      <p>Compile the program:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ MovingParticle.cpp -o MovingParticle -L/usr/lib/x86_64-linux-gnu/ -lGL -lglut -lGLU</pre>
+        </div>
+      </div>
+      <p>And run it:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>./MovingParticle</pre>
+        </div>
+      </div>
+      <p>Observe the resulting animation. You will see a red sphere moving around the window in a circle! Here is my animation. Ignore the slight jump in the animation as it loops. My animated gif recording program only allows integer amounts of seconds as the duration of the recording, leading to the jump:</p>
+      <p><img src="MovingParticle.gif" class="centeropengl"></img></p>
+      <p>We just completed our first simulation! We specified a way for the particle to move as time passes and then implemented a program that animates a sphere following that movement!</p>
+      <h2 id="Model_of_Massless_Sizeless_Particle_In_Velocity_Field">Mathematical Model of a Massless, Sizeless Particle in a Velocity Field</h2>
+      <p>But okay, this doesn't seem very "physics-based," does it? Let's step slightly further into physics by defining a simple concept.</p>
+      <p id="rounded"><b>Definition.</b> If a particle's position function <b>x</b>(<i>t</i>) is differentiable with respect to time on an open interval of <b>R</b> that contains <b>T</b>, then the <b>velocity</b> of the particle is the time-derivative, <b>x</b>'(<i>t</i>), of the position function.</p>
+      <p>To step toward something more physically-driven, let's now imagine our particle is actually floating around in the air, pushed around by a very simplistic mathematical model of wind. Specifically, let's imagine the wind is described by a velocity field, meaning there's a specific wind velocity vector given to us for any given point in space, at any given time instant. In this case, let's imagine our wind velocity vector is defined by the function <b>u</b>(<b>x</b>, <i>t</i>) = <b>u</b>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>) = (<i>u</i>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>), <i>v</i>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>), <i>w</i>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>)), where <i>u</i>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>) = -(<i>x</i> - 0.5 cos (<i>t</i><sup>2</sup>) cos <i>t</i>), <i>v</i>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>) = -(<i>y</i> - 0.5 cos (<i>t</i><sup>2</sup>) sin <i>t</i>), and <i>w</i>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>) = 0. Following the lead of the Bargteil and Shinar <a href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/PhysicsBasedAnimationCourseNotes2019.pdf">course notes</a>, we will have our particle start at a specified initial position <b>x</b>(<i>t</i>) when <i>t</i> = 0, in this case <b>x</b>(0) = (0, 0, 0), and then keep updating the position of the particle by Forward Euler integration: <b>x</b>(<i>t</i> + &Delta;<i>t</i>) = <b>x</b>(<i>t</i>) + &Delta;t &middot; <b>u</b>(<b>x</b>(<i>t</i>), <i>t</i>). That is, the new position of the particle after stepping forward in time by an amount &Delta;<i>t</i> (the time from one call to <code>renderScene</code> to the next) will be the particle's current position plus the time increment amount, &Delta;t, times the velocity vector at the particle's current position at the current time. Note that this time stepping scheme is slightly more sophisticated than the simplest Forward Euler integration scheme, since we let the computer calculate &Delta;t each time it calls <code>renderScene</code>, and since the computer may take slightly different amounts of time between each call to <code>renderScene</code>, &Delta;t could vary when the program is running. And sorry for mentioning the name of a function from the code in the mathematical modeling section of the text here; I just wanted to clarify how the concept of the time step, also known as the time increment, relates to the code we've seen so far.</p>
+      <h2 id="Simulating_Massless_Sizeless_Particle_in_Velocity_Field">Simulating a Massless, Sizeless Particle in a Velocity Field</h2>
+      <p>Here is the code, in a file I called <a href="https://github.com/unusualinsights/phys_sim_examples/blob/main/basic/VelocityParticle.cpp"><code>VelocityParticle.cpp</code></a>.</p>
+      <p>Compile:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ VelocityParticle.cpp -o VelocityParticle -L/usr/lib/x86_64-linux-gnu/ -lGL -lglut -lGLU</pre>
+        </div>
+      </div>
+      <p>Run:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>./VelocityParticle</pre>
+        </div>
+      </div>
+      <p>Observe the resulting animation. It's a rather interesting animation since it looks like something "physics-based" is going on, though it's hard to tell exactly what. Rather than a particle "floating" in the wind, the animation looks more like a particle attached to a few rubber bands being pulled in various directions, eventually oscillating faster and faster as it is pulled toward the center of the window. Here is a looping animation of roughly the first 15 seconds of the animation, minus a little bit at the very beginning:</p>
+      <p><img src="VelocityParticle.gif" class="centeropengl"></img></p>
+      <p>This draws our attention to the fact that it's pretty challenging and unintuitive to try to manually specify velocity fields, even with some cleverly crafted formulas, that actually produce a realistic, physics-based effect that matches our vision for the system we want to model and simulate. As Bargteil and Shinar do in their <a href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/PhysicsBasedAnimationCourseNotes2019.pdf">course notes</a>, we shall now proceed to the next level of physical realism in our mathematical modeling of a particle.</p>
+      <p>Notice how the code above has the keyword <code>static</code> thrown around in a few places. This is not great programming style or structure! It suggests we're hacking our way through an important responsibility: keeping track of the state of our program, namely, the particle's position and the elapsed time. We need to delegate this responsibility to an object that will stay stored in memory between subsequent calls to <code>RenderScene()</code>. Let's make an improved version of this program in a file called <a href="https://github.com/unusualinsights/phys_sim_examples/blob/main/basic/VelocityParticleBetter.cpp"><code>VelocityParticleBetter.cpp</code></a>.</p>
+      <p>While we got rid of the use of the <code>static</code> keyword, this code does still have a global <code>Particle*</code> variable. To ensure it is used properly, I made a global <code>renderScene()</code> function that only calls the <code>Particle</code> class' <code>renderScene()</code> function after the object pointed to by the <code>Particle*</code> variable has been initialized. Since GLUT requires that we use some static or global function as the display and idle functions, we have limited simple options for fully encapsulating all of our simulation and rendering into the <code>Particle</code> class.</p>
+      <h1 id="A_Particle_with_Mass">A Particle with Mass</h1>
     </div>
   </body>
 </html>
