@@ -16,6 +16,7 @@
       <ul>
         <li><a href="#Hello_Sphere">Hello, Sphere!</a></li>
         <li><a href="#Hello_Shaded_Sphere">Hello, Shaded Sphere!</a></li>
+        <li><a href="#Positioning_the_Sphere">Positioning the Sphere</a></li>
       </ul>
     </div>
     <div class="thetext">
@@ -94,6 +95,25 @@
       </ul>
       <p>It's exciting to get our first program working. But the geometry I claimed was 3D just looks like a boring red disc (filled-in circle). How can we make it <i>look</i> 3D?</p>
       <h2 id="Hello_Shaded_Sphere">Hello, Shaded Sphere!</h2>
+      <p>The 3D nature of shapes becomes more apparent when we add shading to our scene. In OpenGL, this is done by modeling the effects of light on the color of each vertex of any shape, assuming some material properties of the shape. By turning on a light, we can make our sphere "look" three-dimensional. In the same directory as the previous program (just for convenience, e.g., access to the same <code>.clang-format</code> file), create a new file called <code>HelloSphereShaded.cpp</code>. Here is my version, which you can copy or download: <a href="https://github.com/unusualinsights/phys_sim_examples/blob/main/basic/HelloSphereShaded.cpp">HelloSphereShaded.cpp</a>.</p>
+      <p>Compile the program:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ HelloSphereShaded.cpp -o HelloSphereShaded -L/usr/lib/x86_64-linux-gnu/ -lGL -lglut -lGLU</pre>
+        </div>
+      </div>
+      <p>Run it:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>./HelloSphereShaded</pre>
+        </div>
+      </div>
+      <p>View the result:</p>
+      <p><img src="HelloSphereShaded.png" class="centeropengl"></img></p>
+      <p>And there you have it! Now there's some shading, revealing the 3D shape of our sphere!</p>
+      <p>To clarify exactly how the 3D coordinates of our shapes map to the 2D locations of shapes we see on the computer screen, let's do some experiments.</p>
+      <h2 id="Positioning_the_Sphere">Positioning the Sphere</h2>
+      <p>Make a new program called <code>PositionSphere.cpp</code> in the same directory (for convenience, you could put it in another directory if you really want). Here's my code: <a href="https://github.com/unusualinsights/phys_sim_examples/blob/main/basic/PositionSphere.cpp">PositionSphere.cpp</a>.</p>
     </div>
   </body>
 </html>
