@@ -78,7 +78,6 @@ code {
 }
 
 .thetext {
-  width: 60%;
   margin-top: 20%;
   margin-left: 20%;
   margin-right: 20%;
@@ -92,6 +91,7 @@ a {
 .sidenav {
   height: 100%;
   width: 15%;
+  max-width: 15%;
   position: fixed;
   /* z-index: 1; */
   top: 0;
