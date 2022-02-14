@@ -33,6 +33,22 @@
         <li><a href="#Mathematical_Model_of_Particles_with_Mass_Size_and_Multiple_Forces">Mathematical Model of Particles with Mass, Size, and Multiple Forces</a></li>
         <li><a href="#Simulating_Colliding_Particles_with_Mass_and_Size">Simulating Colliding Particles with Mass and Size</a></li>
       </ul>
+      <a href="#The_Staggered_Grid">The Staggered Grid</a><br>
+      <ul>
+        <li><a href="#Staggered_Grid_Structure">Staggered Grid Structure</a></li>
+        <li><a href="#Storing_Staggered_Grid_Data">Storing Staggered Grid Data</a></li>
+        <li><a href="#Staggered_Grid_Data_Structure">The Staggered Grid Data Structure</a></li>
+        <li><a href="#Grids_vs_Particles_for_Fluid_Simulation">Grids vs. Particles for Fluid Simulation</a></li>
+      </ul>
+      <a href="#Mapping_from_Particles_to_Grid">Mapping from Particles to the Grid</a><br>
+      <ul>
+        <li><a href="#Barycentric_Weights_of_a_Particle">Barycentric Weights of a Particle</a></li>
+        <li><a href="#Splatting_Particle_Velocities_onto_Grid_in_2D">Splatting Particle Velocities onto the Grid in 2D</a></li>
+        <li><a href="#Splatting_Particle_Velocities_onto_Grid_in_3D">Splatting Particle Velocities onto the Grid in 3D</a></li>
+        <li><a href=="#Normalizing_Splatted_Velocities">Normalizing Splatted Velocities</a></li>
+        <li><a href="#Handling_Boundary_and_Cell_Labels">Handling the Boundary and Cell Labels</a></li>
+        <li><a href="#Implementing_3D_Splatting_of_Particle_Velocities">Implementing 3D Splatting of Particle Velocities</a></li>
+      </ul>
       <br>
       <br>
       <br>
@@ -281,6 +297,7 @@
       <p>Here is an implementation of the model described above, in a file I called <a target="_blank" href="https://github.com/unusualinsights/phys_sim_examples/blob/main/basic/MassParticleGravity.cpp"><code>MassParticleGravity.cpp</code></a>.</p>
       <p>The force is a constant gravitational force; it does not change with time or space. Our code has slightly changed its integration scheme from forward Euler to symplectic Euler, as described in Bargteil and Shinar's <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/PhysicsBasedAnimationCourseNotes2019.pdf">course notes</a>, now that we are dealing with two levels of integration: one to go from force and acceleration to velocity and another to go from velocity to position.</p>
       <p>You may find it a little odd that we structured our code to create and return new instances of <code>Vector2D</code> and <code>Point2D</code> from our <code>MakeUpdatedVelocity</code> and <code>MakeUpdatedPosition</code> functions, respectively. Isn't it inefficient to create and return new objects instead of just modifying one existing object directly? Well, it turns out that return value optimization, which we describe later in this tutorial, is a common optimization of code applied by compilers. This eliminates some of the unnecessary copying of values that are simply being moved from a return value to a variable receiving the return value, for example. But, you may wonder, why rely on compiler optimizations? Why not just pass a <code>Particle</code>'s velocity or position as pointers (pass-by-reference is problematic since if the reference refers to something that's not stored in computer memory, the function has no way of verifying that) to the functions to alter their values without any copying? It turns out there are advantages to <i>stateless</i> functions, i.e., functions that, in the function body, do not alter any value outside of the function's scope. We'll describe more on these advantages later. Notice that this stateless function approach also makes the code read more like mathematical equations: one line of code updates the velocity and another line of code uses that velocity to update the position.</p>
+      <p>All of that said, even with return value optimization eliminating the inefficiencies of returning an object, other factors may need to be taken into consideration for large objects. For instance, if creating a new copy of an object is particularly expensive (e.g., initializing some array with millions of elements), it might still be more efficient to modify the object directly via a member function rather than creating a new instance of it in a stateless function and returning it.</p>
       <p>Here is the animation that results from this physics-based simulation of a projectile subject to the Moon's gravitational force:</p>
       <p><img src="MassParticleGravity.gif" class="centeropengl"></img></p>
 			<h2 id="Mathematical_Model_of_Particles_with_Mass_Size_and_Multiple_Forces">Mathematical Model of Particles with Mass, Size, and Multiple Forces</h2>
@@ -304,6 +321,690 @@
 			<p>If you play with the parameters of this simulation like changing the masses or initial velocities or positions of the particles, you may see some weird behaviors, like a particle getting stuck slightly dangling outside the box, or one particle getting "stuck" inside another particle. If you try to damp the collisions a bit, say, by having the impulse force be 0.99 times what we compute now, you'll see other bizarre behaviors, like the wall not applying enough force to keep a particle inside the box! Simulating what should just be a simple series of elastic collisions in essentially a 2D simulation (there is a third dimension, we're just not moving anything or applying any forces in that direction) is not as simple as it may seem to get into a fully realistic state!</p>
 			<p>Note the order of certain computations in the code above is important. In each time step, we must first zero out the force accumulators of each particle. Then, compute the forces on particles due to collisions with other particles and/or a wall of the viewing frustum. Once these forces have been applied to each particle, then we update the velocity followed by the position of each particle. In more complex future simulations, the order of certain computations will be important to ensure a more accurate simulation.</p>
 			<h1 id="The_Staggered_Grid">The Staggered Grid</h1>
+      <p>Fluid simulations involve a data structure called the <i>staggered grid</i> or the <i>marker-and-cell (MAC) grid</i>. The staggered grid separates points where we sample each of the four following values: fluid pressure and the <i>x</i>, <i>y</i>, and <i>z</i> components of fluid velocity. This will help us calculate derivatives of pressure and velocity for physics-based simulations of fluids. See <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">Robert Bridson's excellent book on fluid simulation</a> for details on the staggered grid data structure. An explanation of the staggered or MAC grid is in Section 2.4 of <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's SIGGRAPH 2007 course notes</a>.</p>
+      <h2 id="Staggered_Grid_Structure">Staggered Grid Structure</h2>
+      <p>The staggered grid is a 2D or 3D grid representing the full spatial volume within which we simulate our fluid(s). We will label each grid cell of a 2D staggered grid with a row (along the <i>x</i> direction) index, <i>i</i>, and a column (along the <i>y</i> direction) index, <i>j</i>:</p>
+      <p><img src="MacGrid2D.png" style="border-style: none;" class="center"></img></p>
+      <p>At the center of each grid cell with indices <i>i</i> and <i>j</i>, we will store a nonnegative fluid pressure value, <i>p</i><sub><i>i</i>, <i>j</i></sub> &isin; <b>R</b>. At the center of each boundary between adjacent grid cells, we will store a component of the fluid velocity that's perpendicular to that boundary. That is, at the center of the boundary between grid cell <i>i</i>, <i>j</i> and grid cell <i>i</i> + 1, <i>j</i>, we store the horizontal component, <i>u</i><sub><i>i</i> + &frac12;, <i>j</i></sub> &isin; <b>R</b>, of the fluid's velocity at that location. At the center of the boundary between grid cell <i>i</i>, <i>j</i> and grid cell <i>i</i>, <i>j</i> + 1, we store the vertical component, <i>v</i><sub><i>i</i>, <i>j</i> + &frac12;</sub> &isin; <b>R</b>, of the fluid's velocity at that location:</p>
+      <p><img src="MacGrid2D_Values.png" style="width: 75%; border-style: none;" class="center"></img></p>
+      <p>We will label each grid cell of a 3D staggered grid with an index <i>i</i> along the <i>x</i> direction, index <i>j</i> along the <i>y</i> direction, and index <i>k</i> along the <i>z</i> direction:</p>
+      <p><img src="MacGrid3D.png" style="border-style: none;" class="center"></img></p>
+      <p>Like the 2D staggered grid, the 3D staggered grid will have a fluid pressure value, <i>p</i><sub><i>i</i>, <i>j</i>, <i>k</i></sub>, stored at the center of each grid cell with indices <i>i</i>, <i>j</i>, <i>k</i>. At the center of each boundary face between adjacent grid cells, the 3D grid will also have a component of the fluid velocity perpendicular to that boundary:</p>
+      <p><img src="MacGrid3D_Values.png" style="border-style: none;" class="center"></img></p>
+      <p>Note that for both the 2D and 3D staggered grids, the velocity components are <i>not</i> components of a single 2D or 3D velocity vector! Instead, we are storing different components of the fluid velocity at entirely different locations in space.</p>
+      <h2 id="Storing_Staggered_Grid_Data">Storing Staggered Grid Data</h2>
+      <p>We will focus on implementing the 3D staggered grid, although we'll start with a 2D grid description since it's much easier to understand the main concepts and then extend to 3D than to see the concepts for the first time in 3D. As you can see, we need to store a variety of values in some kind of 3D array.  For example, we need to store the fluid pressure for any given grid cell with indices <i>i</i>, <i>j</i>, and <i>k</i>. We also need to store the <i>u</i>, <i>v</i>, and <i>w</i> values, i.e., the <i>x</i>, <i>y</i>, and <i>z</i> components of the fluid velocity at the appropriate grid cell boundaries. We will also need to store non-real-number values, e.g., whether each grid cell contains a solid or fluid or is empty.</p>
+      <p>We will begin by creating a class, <code>Array3D</code>, based on the class of the same name in <a href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">Bargteil and Shinar's SIGGRAPH course</a>. The <code>Array3D</code> class will be templated so we can use it to store different types of data, e.g., <code>double</code> values for real numbers like pressure and velocity and other data types for labeling grid cells as containing solid or fluid or being empty. But exactly how large should our 3D array be for each type of value? For example, the velocity components are defined at the grid cell boundaries rather than at the cells themselves and we do this weird indexing of them with "&frac12;" thrown in just to make life difficult?! Let's do a quick illustration to make sure we count this properly.</p>
+      <p><img src="Array3DSketch.png" style="border-style: none;" class="center"></img></p>
+      <p>Assuming we store velocities not only between grid cells but really on all faces of grid cells, i.e., including the boundary of the entire grid, we will actually end up storing differently-sized arrays for different quantities. If we define <i>n<sub>x</sub></i> as the number of columns of our grid, i.e., <i>i</i> &isin; {0, 1, ..., <i>n<sub>x</sub></i> - 1}, and define <i>n<sub>y</sub></i> as the number of rows in the grid, i.e., <i>j</i> &isin; {0, 1, ..., <i>n<sub>y</sub></i> - 1}, then it's easy to see from the diagram above of a 2D grid that the number of horizontal velocity components we store is (<i>n<sub>x</sub></i> + 1)<i>n<sub>y</sub></i> while the number of vertical velocity components we store is <i>n<sub>x</sub></i>(<i>n<sub>y</sub></i> + 1). Meanwhile, the number of pressure values we store would just be one per grid cell, i.e., <i>n<sub>x</sub>n<sub>y</sub></i>. Any array of labels we store for each grid cell would also be of that size, <i>n<sub>x</sub>n<sub>y</sub></i>.</p>
+      <p>Extending this to 3D, the <i>i</i> and <i>j</i> indices have the same range as above, and with <i>n<sub>z</sub></i> representing the depth (number of grid cells in the <i>z</i> direction) of the grid, <i>k</i> &isin; {0, 1, ..., <i>n<sub>z</sub></i> - 1}. I hope I have convinced you that the 3D array of pressure values would be a <i>n<sub>x</sub></i> &#10005; <i>n<sub>y</sub></i> &#10005; <i>n<sub>z</sub></i> array. The 3D array of horizontal velocity components would be a (<i>n<sub>x</sub></i> + 1) &#10005; <i>n<sub>y</sub></i> &#10005; <i>n<sub>z</sub></i> array, the vertical components would be a <i>n<sub>x</sub></i> &#10005; (<i>n<sub>y</sub></i> + 1) &#10005; <i>n<sub>z</sub></i> array, and the depth (<i>z</i> direction) components would be a <i>n<sub>x</sub></i> &#10005; <i>n<sub>y</sub></i> &#10005; (<i>n<sub>z</sub></i> + 1) array.</p>
+      <p>First, we'll create a basic 3D array class that can take on any reasonable nonnegative integer value (up to the range covered by the type <code>std::size_t</code> in C++) for each of its three dimensions. The <code>Array3D</code> class will be templated so we can store values of any data type inside it. We will start with just a constructor, an accessor ("getter") function that allows us to look up a value at a particular <i>i</i>, <i>j</i>, <i>k</i> index in the array without modifying it, and a mutator ("setter") function that does the same thing as the accessor but allows us to change the value if we want. We'll also add accessor ("getter") functions that return the dimensions, <i>n<sub>x</sub></i>, <i>n<sub>x</sub></i>, and <i>n<sub>x</sub></i> of the array. Note that all of this code will be implemented in a single header file, <a target="_blank" href=""><code>Array3D.h</code></a> (as is typical for templated classes, there is no associated <code>.cpp</code> file). I put this into a new subdirectory of our code called <code>incremental0</code>. The next several files of C++ code we create will also go into this same subdirectory. We could dump everything into one directory, but this way we can isolate the different stages of our code development into smaller pieces.</p>
+      <p>Note we declared the copy constructor and assignment operator as private without implementing them; this prevents accidental misuse of any default copy constructor or assignment operator by any code outside of this class (e.g., code that instantiates and uses this class), reducing the chance of unintended bugs when using this class. We also require that <code>nx_</code>, <code>ny_</code>, and <code>nz_</code> are constants: they get initialized upon construction of an Array3D object and will never change during the life of the object. The object's data is deleted upon destruction. To test this class and demonstrate how to use it, we create a short file, <a target="_blank" href=""><code>Array3DTest.cpp</code></a>, also in the <code>incremental0</code> directory.</p>
+      <p>To compile and run both <code>Array3DTest.cpp</code> and <code>Array3D.h</code>, we issue these two commands while we are in the <code>incremental0</code> directory:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ Array3DTest.cpp -o Array3DTest<br>./Array3DTest</pre>
+        </div>
+      </div>
+      <p>This results in the following output:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>Array is 3 x 4 x 5.<br><br>table(0, 0, 0) = 7<br>table(1, 3, 4) = 12</pre>
+        </div>
+      </div>
+      <p>This is what we expected! We created a 3 &#10005; 4 &#10005; 5 array of integers, assigned 7 to the value at index 0, 0, 0, assigned 12 to the value at index 1, 3, 4, and then looked up the values those two indices and retrieved them, verifying that our mutator and accessor functions seem to be doing what we intended. To clean up after running this test program, I recommend:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>rm Array3DTest</pre>
+        </div>
+      </div>
+      <p>Let's leave the <code>Array3D</code> class implementation aside now that we have a basic functionality in place. We'll revisit how to change or add to this class as needed when we implement a fluid simulation algorithm.</p>
+      <p>But how do we represent the velocity component arrays using the Array3D data structure? Array3D only accepts integer indices as inputs to its accessor and mutator functions, yet all the indices we use to refer to the velocity components in the staggered grid have &frac12; in one of the three indices? We use the convention <a href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">Bridson and M&uuml;ller-Fischer</a> describe (see, for example, Slide 46 of <a href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/BasicFluids.ppt">this presentation</a>). Recall the horizontal components, <i>u</i>, of fluid velocity will be stored in a 3D array with dimensions (<i>n<sub>x</sub></i> + 1) &#10005; <i>n<sub>y</sub></i> &#10005; <i>n<sub>z</sub></i>. The 3D array for <i>u</i> values in the 3D staggered grid can have <code>u(i, j, k)</code> = <i>u</i><sub><i>i</i> - &frac12;, <i>j</i>, <i>k</i></sub>, for all values of <i>i</i> from 0 through (<i>n<sub>x</sub></i> + 1) - 1 = <i>n<sub>x</sub></i> . So, <code>u(0, 0, 0)</code> = <i>u</i><sub>-&frac12;, 0, 0</sub>, <code>u(1, 0, 0)</code> = <i>u</i><sub>&frac12;, 0, 0</sub>, and <code>u(nx, 0, 0)</code> = <i>u</i><sub><i>n<sub>x</sub></i> - &frac12;, 0, 0</sub>. Going from <i>i</i> = 0 through <i>i</i> = <i>n<sub>x</sub></i> adds up to a total of <i>n<sub>x</sub></i> + 1 cells in a row of the grid. Similarly, for all values of <i>j</i> from 0 through <i>n<sub>y</sub></i>, <code>v(i, j, k)</code> = <i>v</i><sub><i>i</i>, <i>j</i> - &frac12;, <i>k</i></sub>. And for all <i>k</i> from 0 through <i>n<sub>z</sub></i>, <code>w(i, j, k)</code> = <i>w</i><sub><i>i</i>, <i>j</i>, <i>k</i> - &frac12;</sub>. In contrast, a 3D array to store fluid pressure values will just have the same dimensions as the grid itself: for <i>i</i> ranging from 0 through <i>n<sub>x</sub></i> - 1, <i>j</i> ranging from 0 through <i>n<sub>y</sub></i> - 1, and <i>k</i> ranging from 0 through <i>n<sub>z</sub></i> - 1, <code>p(i, j, k)</code> = <i>p</i><sub><i>i</i>, <i>j</i>, <i>k</i></sub>.</p>
+      <h2 id="Staggered_Grid_Data_Structure">The Staggered Grid Data Structure</h2>
+      <p>Now we can put together a basic staggered grid class that contains 3D arrays, as described above, to store pressure values and velocity component values. Here are the header file, <a target="_blank" href =""><code>StaggeredGrid.h</code></a> and the implementation file, <a target="_blank" href =""><code>StaggeredGrid.cpp</code></a>. We also create a small test program in another file, <a target="_blank" href=""><code>StaggeredGridTest.cpp</code></a>. All of these files are also in my <code>incremental0</code> directory.</p>
+      <p>We compile this with the following command:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ StaggeredGrid.cpp StaggeredGridTest.cpp</pre>
+        </div>
+      </div>
+      <p>Note that both the class definition file, <code>StaggeredGrid.cpp</code>, and test program file, <code>StaggeredGridTest.cpp</code>, must be compiled together. If you only compile the test program, you will get undefined reference errors because the C++ compiler won't be able to find the implementations of the constructor and destructor that are in <code>StaggeredGrid.cpp</code>. Next, run the resulting program:</p>
+      <div class="outer"><div class="inner"><pre>./a.out</pre></div></div>
+      <p>The output should look like:</p>
+      <p id="code">Created StaggeredGrid:<br>
+      - p array is 3 x 4 x 5<br>
+      - u array is 4 x 4 x 5<br>
+      - v array is 3 x 5 x 5<br>
+      - w array is 3 x 4 x 6</p>
+      <p>This matches what we expected: the original grid was 3 &#10005; 4 &#10005; 5. The horizontal velocity grid has one more horizontal component than the original grid, so it's 4 &#10005; 4 &#10005; 5. Similarly, the vertical and depth velocity grids also have exactly one dimension with one more slice than the orignal grid.</p>
+      <h2 id="Grids_vs_Particles_for_Fluid_Simulation">Grids vs. Particles for Fluid Simulation</h2>
+      <p>We haven't fully clarified why we use a staggered grid for fluid simulation other than something about better derivative-taking. This will get clearer as we flesh out the complete algorithm we'll be implementing for fluid simulation. Critical to our approach is using not only this staggered grid, but also particles in the spirit of what we did earlier when simulating Newtonian mechanics using spheres. What is this madness? We use particles and grids? To do what exactly?</p>
+      <p>Let's back up a little more before we continue onto more details of our simulation approach. How do you use a computer to simulate the physics of fluids? As we've seen earlier, we can simulate individual particles that feel forces and bounce off of the walls of the viewing frustum and bump into each other. But, it's also common to use grids to simulate fluids--instead of individual particles, you can just keep track of fluid properties like velocity and pressure at specific, fixed points on a grid in space, and not have to track individual particles.</p>
+      <p>But there are pros and cons to both particles and grids. As explained, e.g., on Page 5 of <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's 2007 SIGGRAPH course notes</a>, the grid-based, or <i>Eulerian</i>, approach to fluid simulation is much better for calculating derivatives with respect to spatial coordinates--it's easier to calculate &Delta;<i>x</i> on a fixed grid (you know where the <i>x</i>s are at all times) than over a cloud of constantly moving particles (the <i>x</i>s keep moving all over the place). On the other hand, simulating a fluid as a bunch of individual particles (the <i>Lagrangian</i> approach) makes some things easier--Newton's laws apply directly to each particle and if each particle has a fixed mass and the number of particles stays constant during a simulation, then mass is automatically conserved.</p>
+      <p>Fluid simulation, for the most part, focuses on the Eulerian (grid-based) approach rather than the Lagrangian (particle-based) approach since a fluid is often best modeled as a continuum with variables like velocity and pressure that change over time. Historically, simulating a fluid as thousands or millions or billions of particles was computationally too difficult anyway. But, since there are also some advantages to the particle-based approach, a common approach to fluid simulation these days is to mix the two approaches into a <i>semi-Lagrangian</i> approach, where you do some calculations on particles, then map values from the particles to the grid, do some calculations on the gird, and then map values from the grid back to the particles, and repeat. These simulation methods that use both particles and grids are generally called "hybrid" methods, since they blend Eulerian (grid) and Lagrangian (particle) viewpoints.</p>
+      <p>The specific type of fluid simulation algorithm we'll introduce in this tutorial is called the Fluid Implicit Particle (FLIP) method. FLIP is a class of fluid simulation algorithms that resulted from early research in the mid-20th century on fluid simulation. See <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">Bridson and M&uuml;ller-Fischer's notes</a> and the associated book for more details. A very nice introduction to the trade-offs in FLIP vs. other "hybrid" particle-grid methods is given in a <a target="_blank" href="https://www.cs.ucr.edu/~shinar/papers/2019-mac-apic.pdf">paper by Ding et al. (2019)</a>.</p>
+      <h1 id="Mapping_from_Particles_to_Grid">Mapping from Particles to the Grid</h1>
+      <p>We'll build up the componenets of the specific implementation of FLIP presented in and provided with <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">Bargteil and Shinar's 2019 SIGGRAPH course</a> mathematically and visually first. Then we'll build up the actual C++ code to implement a modified version of the specific version of the FLIP method provided with that SIGGRAPH course.</p>
+      <p>One part of our FLIP algorithm will involve transforming velocities of particles into velocity components on the staggered grid that we'll use for fluid simulation. Our velocity component 3D arrays in our staggered grid will all be zeroed out first. We'll pretend that each particle isn't really just a zero-dimensional point; rather, each particle will be like an object with some real power and influence over the grid cells around it, and we'll take each particle's velocity and <i>splat</i> (yes, that's a technical term, see <a target="_blank" href="https://developer.nvidia.com/cataclysm-flip-solver-gpu-particles">this page</a> for example) the particle velocity onto neighboring grid cells' velocity components to make our 3D arrays of velocity components then represent a sort of Eulerian "field" of fluid velocities. We'll explain later why we do this, when we do this in each time step of our simulation, later. Here I just want to highlight some minute details of the indexing and mapping process so we don't get confused trying to write the code for this part later.</p>
+      <h2 id="Barycentric_Weights_of_a_Particle">Barycentric Weights of a Particle</h2>
+      <p>Since a grid has to exist somewhere in space and have some fixed size for its grid cells, let's denote the location of the <i>lower corner</i> of the grid, i.e., the point with the lowest value of <i>x</i>, <i>y</i>, and <i>z</i> in the entire grid, as <i>l<sub>c</sub></i> (yes, that's a lowercase letter "ell" for "lower" and then subscript "c" for "corner"). Let's assume each grid cell is a perfect cube with all side lengths equal to some nonzero real number &Delta;<i>x</i>; yes, even in the <i>y</i> and <i>z</i> directions, not only the <i>x</i> direction.</p>
+      <p><img src="GridExtent.png" style="border-style: none;" class="center"></img></p>
+      <p>The figure above shows the lower corner, <i>l<sub>c</sub></i>, the upper corner, <i>u<sub>c</sub></i> (the point with the greatest <i>x</i>, <i>y</i>, and <i>z</i> coordinate values in the entire grid), and the grid spacing, &Delta;<i>x</i>. Recall that the number of grid cells in the <i>x</i> dimension is <i>n<sub>x</sub></i>, the number of cells in the <i>y</i> direction is <i>n<sub>y</sub></i>, and the number of cells in the <i>z</i> direction is <i>n<sub>z</sub></i>, so <i>u<sub>c</sub></i> = <i>l<sub>c</sub></i> + (<i>n<sub>x</sub></i> + &Delta;<i>x</i>, <i>n<sub>y</sub></i> + &Delta;<i>y</i>, <i>n<sub>z</sub></i> + &Delta;<i>x</i>).</p>
+      <p>Note that <i>l<sub>c</sub></i> and <i>u<sub>c</sub></i> can be literally any two points in <b>R</b><sup>3</sup> as long as <i>u<sub>c</sub></i>'s three coordinates are greater than <i>l<sub>c</sub></i>'s respective three coordinates. But we index our grid cells using integers: <i>i</i>, <i>j</i>, and <i>k</i>. So we'll need a way to translate between the integer cell indices and the actual real-number coordinates of any location of a particle within the grid. Let's start with this question, which we'll need to answer to implement our FLIP algorithm: given an arbitrary particle <i>p</i> located at some point (<i>x</i>, <i>y</i>, <i>z</i>) in this grid, what are the indices, (<i>i</i>, <i>j</i>, <i>k</i>), of the grid cell that contains <i>p</i>, and relative to that grid cell's lower corner, how far into the grid cell in each coordinate direction is the particle's location, relative to the grid cell width?</p>
+      <p>To figure that out, it's actually easier if we note that the computation of indices of a grid cell containing a particular point is independent in each coordinate direction. That is, the <i>i</i> index of the cell containing <i>p</i> is only dependent on <i>x</i> (i.e., <i>p</i>'s <i>x</i>-coordinate), <i>j</i> only depends on <i>y</i>, and <i>k</i> only depends on <i>z</i>. So, very briefly, let's just imagine we only had a one-dimensional grid: basically a finite-length interval of the real number line whose leftmost position is <i>l<sub>c</sub></i>'s <i>x</i>-coordinate and whose rightmost position is <i>u<sub>c</sub></i>'s <i>x</i>-coordinate.</p>
+      <p><img src="Grid1D.png" style="border-style: none;" class="center"></img></p>
+      <p>The figure above illustrates a one-dimensional (1D) grid extending from some real number <i>l<sub>c</sub></i> to another greater real number <i>u<sub>c</sub></i>. There are <i>n<sub>x</sub></i> grid cells, each with width &Delta;<i>x</i>. So <i>u<sub>c</sub></i> = <i>l<sub>c</sub></i> + <i>n<sub>x</sub></i> &middot; &Delta;<i>x</i>. If a point is strictly inside the boundaries of a grid cell, then we consider that cell to be the cell that contains it. If a point is on the boundary of a grid cell, we consider it to be in the grid cell that extends to the right of the point. So, <i>l<sub>c</sub></i> is in cell 0, <i>x</i><sub>1</sub> is in cell <i>i</i> - 1, and <i>x</i><sub>3</sub> is in cell <i>i</i>. <i>x</i><sub>2</sub> is in cell <i>i</i> since the point is on the left boundary of that cell.</p>
+      <p>So if the only known values are <i>l<sub>c</sub></i>, &Delta;<i>x</i>, and <i>n<sub>x</sub></i>, then if we are given a particular point <i>x</i>, how can we determine which grid cell contains <i>x</i>? Here is our procedure:
+      <ol>
+        <li>Subtract the lower bound, <i>l<sub>c</sub></i>, from the point's value, <i>x</i>, to get the 1D vector displacement, <i>x</i>' = <i>x</i> - <i>l<sub>c</sub></i>, of the point relative to the grid's lower corner.</li>
+        <li>Determine how many "grid cell displacements" it takes to get to the grid that contains the point <i>x</i> from the lower corner <i>l<sub>c</sub></i>. This is just &lfloor; <i>x</i>' / &Delta;<i>x</i> &rfloor;. That is, the floor of (greatest integer less than or equal to) <i>x</i>' / &Delta;<i>x</i>, or equivalently, the result of dividing the displacement <i>x</i>' by &Delta;<i>x</i> and throwing away the remainder. This is, in fact, just the index <i>i</i> of the grid containing <i>x</i>. So, <i>i</i> = &lfloor; <i>x</i>' / &Delta;<i>x</i> &rfloor;. Plug in some known values to verify. For example, if <i>x</i> = <i>l<sub>c</sub></i>, then <i>x</i>' / &Delta;<i>x</i> = (<i>x</i> - <i>l<sub>c</sub></i>) / &Delta;<i>x</i> = (<i>l<sub>c</sub></i> - <i>l<sub>c</sub></i>) / &Delta;<i>x</i> = 0, the floor of which is 0, the correct index of the cell containing <i>l<sub>c</sub></i>. If <i>x</i> = <i>l<sub>c</sub></i> + &Delta;<i>x</i>/2, then <i>i</i> = <i>x</i>' / &Delta;<i>x</i> = (<i>x</i> - <i>l<sub>c</sub></i>) / &Delta;<i>x</i> = (&Delta;<i>x</i> / 2) / &Delta;<i>x</i> = &frac12;, the floor of which is also 0, the correct index of the cell containing the point. You can plug in values of <i>x</i> like <i>l<sub>c</sub></i> + &Delta;<i>x</i>, <i>l<sub>c</sub></i> + 3&Delta;<i>x</i>/2, and so on, to convince yourself that this calculation works for all possible values of <i>x</i> within our 1D grid. For now we'll ignore the fact that <i>u<sub>c</sub></i> would, by this scheme, end up in some nonexistent grid cell with index <i>n<sub>x</sub></i>.</li>
+      </ol>
+      </p>
+      <p>Once we've determined which grid cell contains <i>x</i>, the second part of our question was, how do we characterize how far into that grid cell <i>x</i> is, relative to the width of a grid cell? Note that the left end of the grid cell with index <i>i</i> is just <i>l<sub>c</sub></i> + <i>i</i> &middot; &Delta;<i>x</i>. The displacement from that point to the right end of the grid cell is just another &Delta;<i>x</i> to the right. Okay. So if we were exactly at the midpoint of grid cell <i>i</i>, then we'd be at the point <i>x</i> = <i>l<sub>c</sub></i> + <i>i</i> &middot; &Delta;<i>x</i> + &Delta;<i>x</i> / 2. If we were only one-fourth of the way into grid cell <i>i</i> from the cell's left boundary, we'd be at the point <i>x</i> = <i>l<sub>c</sub></i> + <i>i</i> &middot; &Delta;<i>x</i> + &Delta;<i>x</i> / 4. If we were three-fourths of the way into the grid cell, we'd be at <i>x</i> = <i>l<sub>c</sub></i> + <i>i</i> &middot; &Delta;<i>x</i> + 3 &Delta;<i>x</i> / 4. So, the overall pattern, then, is that if we are a fraction <i>w</i><sub>0</sub> into grid cell <i>i</i>, then we are at <i>x</i> = <i>l<sub>c</sub></i> + <i>i</i> &middot; &Delta;<i>x</i> + <i>w</i><sub>0</sub> &middot; &Delta;<i>x</i>. We call <i>w</i><sub>0</sub> = (<i>x</i> - <i>l<sub>c</sub></i> - <i>i</i> &middot; &Delta;<i>x</i>) / &Delta;<i>x</i> the <i>barycentric weight</i>, or just the <i>weight</i> for short, of the point <i>x</i> in the grid cell <i>i</i>. This is illustrated in the figure below.</p>
+      <p><img src="Grid1DWeight.png" style="border-style: none;" class="center"></img></p>
+      <p>I know that probably seemed unnecessarily wordy, but it's important to get the details right, avoiding off-by-one errors, etc., and it's easier to make sure we're doing that right in one dimension than in multiple dimensions. We can actually think of what we just did as a transformation from Cartesian coordinates, <i>x</i>, to an index and barycentric coordinate pair, (<i>i</i>, <i>w</i><sub>0</sub>) = (&lfloor;<i>x</i> - <i>l<sub>c</sub></i>&rfloor; / &Delta;<i>x</i>, (<i>x</i> - <i>l<sub>c</sub></i> - <i>i</i> &middot; &Delta;<i>x</i>) / &Delta;<i>x</i>) = (&lfloor;<i>x</i>'&rfloor; / &Delta;<i>x</i>, (<i>x</i>' - <i>i</i> &Delta;<i>x</i>) / &Delta;<i>x</i>) = (&lfloor;<i>x</i>'&rfloor; / &Delta;<i>x</i>, <i>x</i>' / &Delta;<i>x</i> - <i>i</i>). Now, let's extend this quickly to two dimensions.</p>
+      <p>Let's now extend this to two dimensions. Knowing that all the math works out identically for <i>x</i> and <i>y</i> coordinates, we can derive our transformation from Cartesian coordinates of a particle's 2D position, (<i>x</i>, <i>y</i>), to its cell indices (<i>i</i>, <i>j</i>), and barycentric weights, (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>). Let's first subtract <i>l<sub>c</sub></i>'s coordinates (note <i>l<sub>c</sub></i> is now a point in <b>R</b><sup>2</sup> with 2 coordinates, not just a single real number) from the particle's 2D position to get the particle's displacement relative to <i>l<sub>c</sub></i>, which we'll denote as (<i>x</i>', <i>y</i>') = (<i>x</i>, <i>y</i>) - <i>l<sub>c</sub></i>. Then <i>i</i> = &lfloor;<i>x</i>'&rfloor; / &Delta;<i>x</i>. Similarly, <i>j</i> = &lfloor;<i>y</i>'&rfloor; / &Delta;<i>x</i>. As before, <i>w</i><sub>0</sub> = <i>x</i>' / &Delta;<i>x</i> - <i>i</i>. Similarly, <i>w</i><sub>1</sub> = <i>y</i>' / &Delta;<i>x</i> - <i>j</i>. This is illustrated in the figure below.</p>
+      <p><img src="Grid2DIndicesWeights.png" style="border-style: none;" class="center"></img></p>
+      <p>Now going all the way to three dimensions, a particle at (<i>x</i>, <i>y</i>, <i>z</i>), or relative to the lower corner of the grid, (<i>x</i>', <i>y</i>', <i>z</i>') = (<i>x</i>, <i>y</i>, <i>z</i>) - <i>l<sub>c</sub></i>, will have indices
+      <ul>
+        <li><i>i</i> = &lfloor;<i>x</i>'&rfloor; / &Delta;<i>x</i></li>
+        <li><i>j</i> = &lfloor;<i>y</i>'&rfloor; / &Delta;<i>x</i></li>
+        <li><i>k</i> = &lfloor;<i>z</i>'&rfloor; / &Delta;<i>x</i></li>
+      </ul>
+      and barycentric weights
+      <ul>
+        <li><i>w</i><sub>0</sub> = <i>x</i>' / &Delta;<i>x</i> - <i>i</i></li>
+        <li><i>w</i><sub>1</sub> = <i>y</i>' / &Delta;<i>x</i> - <i>j</i></li>
+        <li><i>w</i><sub>2</sub> = <i>z</i>' / &Delta;<i>x</i> - <i>k</i>.</li>
+      </ul>
+      </p>
+      <p>This is illustrated in the figure below. This is the set of calculations we'll use for our fluid simulation algorithm since we are mostly interested in simulating fluids in 3D, not 2D or 1D.</p>
+      <p><img src="Grid3DIndicesWeights.png" style="border-style: none;" class="center"></img></p>
+      <p>Note that we can think of this as a breakdown of a point's position as starting from the lower corner, <i>l<sub>c</sub></i>, translating by (<i>i</i> &middot; &Delta;<i>x</i>, <i>j</i> &middot; &Delta;<i>x</i>, <i>k</i> &middot; &Delta;<i>x</i>), and then translating once more by (<i>w</i><sub>0</sub> &middot; &Delta;<i>x</i>, <i>w</i><sub>1</sub> &middot; &Delta;<i>x</i>, <i>w</i><sub>2</sub> &middot; &Delta;<i>x</i>) to get to a particle's position, (<i>x</i>, <i>y</i>, <i>z</i>). We can even think of this as follows: if we translate the entire grid so that the lower corner, <i>l<sub>c</sub></i> ends up at the origin and then scale the entire grid so that &Delta;<i>x</i> becomes 1, then the actual coordinates of the point (<i>x</i>, <i>y</i>, <i>z</i>) become (<i>i</i> + <i>w</i><sub>0</sub>, <i>j</i> + <i>w</i><sub>1</sub>, <i>k</i> + <i>w</i><sub>2</sub>)!</p>
+      <p>Note that &Delta;<i>x</i> is technically just a positive real number, but sometimes when we label a vector with it like in the figure above, we're imagining it representing a vector with a length equal to what the label says, pointing in the direction of that arrow.</p>
+      <p>Let's now implement two functions: one to compute <i>i</i>, <i>j</i>, and <i>k</i> for a given particle position and another to compute the barycentric weights, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, and <i>w</i><sub>2</sub>. Let's call the first function <code>floor</code> following Bargteil and Shinar's code. The function will take as input a point, (<i>x</i>, <i>y</i>, <i>z</i>), a lower corner point, <i>l<sub>c</sub></i> = (<i>x<sub>l<sub>c</sub></sub></i>, <i>y<sub>l<sub>c</sub></sub></i>, <i>z<sub>l<sub>c</sub></sub></i>), and a grid cell width, &Delta;<i>x</i>, and return three integers, <i>i</i>, <i>j</i>, and <i>k</i>, indicating the indices of the grid cell containing that particle, according to the calculations shown earlier. But wait! How are we going to represent all this data in C++? How will we return 3 integers from a function all at the same time?</p>
+      <p>Our grid spacing (grid cell width) parameter, &Delta;<i>x</i>, can just be a <code>double</code> as in Bargteil and Shinar's code. But how will we represent the two 3D point parameters, (<i>x</i>, <i>y</i>, <i>z</i>) and (<i>x<sub>l<sub>c</sub></sub></i>, <i>y<sub>l<sub>c</sub></sub></i>, <i>z<sub>l<sub>c</sub></sub></i>)? Well, we could create our own 3D point data type, or, we could just use the Eigen library, as Bargteil and Shinar's code does. While we attempt to minimize the number of external libraries we insert into this tutorial's code, Eigen is so standard in graphics and physics-based computing that importing it is really not a burden. And it's very easy to install and use. Not to mention, it has some performance advantages, such as <a target="_blank" href="https://eigen.tuxfamily.org/dox/TopicLazyEvaluation.html">lazy evaluation</a>, where it does as much manipulation of algebraic expressions involving vectors and matrices at compile time as it can, minimizing the amount of computation done at run time.</p>
+      <p>To install Eigen, if you haven't already, run this command in a terminal:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>sudo apt install libeigen3-dev</pre>
+        </div>
+      </div>
+      <p>Then type this command to figure out where Eigen was installed:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>whereis eigen3</pre>
+        </div>
+      </div>
+      <p>For me, this command returned <code>/usr/include/eigen3</code>. Remember this or write it down somewhere, since we will use this path to compile any code that uses Eigen.</p>
+      <p>Let's also answer the other question from earlier: how will we return three integers from a function all at the same time? Well, we could just pass the integers in by reference and let the function modify them in order to "return" them without really returning them. However, this has some issues as we shall see soon. Here's one way to implement this function a not-so-great way, in a complete program with a <code>main()</code> function for some quick sanity-checking of our code's correctness, in a file I called <a target="_blank" href=""><code>GridIndexing_Bad.cpp</code></a>, still in our <code>incremental0</code> directory.</p>
+      <p>Note we just used casting to integers to do the "floor" operation of finding the largest integer less than or equal to a given double-precision number. This works when the value is known to be positive, as is the case for us here (it wouldn't work that way for negative numbers, though!). Compile this code with this command, which includes the Eigen path noted above, and doesn't unnecessarily include the OpenGL library stuff since we're just doing a simple math operation using vectors:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>g++ GridIndexing_Bad.cpp -o GridIndexing_Bad -I/usr/include/eigen3/</pre>
+        </div>
+      </div>
+      <p>Run the code with:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>./GridIndexing_Bad</pre>
+        </div>
+      </div>
+      <p>Here's the output:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>i = 2, j = 1, k = 0
+i = 3, j = 8, k = 9
+i = -1, j = 0, k = 0</pre>
+        </div>
+      </div>
+      <p>There are several issues with this implementation. First, you may notice that last call to <code>floor</code> results in a negative index, which makes no sense! Also, what if <code>dx</code>, i.e., &Delta;<i>x</i>, had been zero, or negative? There's nothing in the code preventing that from happening! Also, doesn't it seem weird that we use some special data type, <code>Eigen::Vector3d</code>, to handle a 3D vector of <code>double</code>s, but we just use three separate integer variables to handle essentially a 3D vector if <code>int</code>s?</p>
+      <p>The <code>floor</code> function has an issue which is often not considered a problem by many: it is stateful, meaning it takes in some variables from outside its scope and alters them. Instead, <a target="_blank" href="https://medium.com/@brooknovak/benefits-of-writing-stateless-code-with-7-essential-tips-on-how-to-write-stateless-c-ee4a26e9f356">stateless functions</a> (e.g., that simply take in parameters and return other values, acting in total isolation from all other code) are preferable to stateful ones (e.g., functions that take in references or pointers to variables and then modify them) for a variety of reasons. And in C++, we usually don't have to worry about extra copies of returned objects slowing down our code since a standard optimization compilers use is <a target="_blank" href="https://en.wikipedia.org/wiki/Copy_elision">return value optimization</a>. So, let's create a simple data structure representing a triplet of nonnegative integers, (<i>i</i>, <i>j</i>, <i>k</i>), and have the value returned by our <code>floor</code> function be an instance of that data type.</p>
+      <p>So, we can make some improvements to our code in a new file, <a target="_blank" href=""><code>GridIndexing.cpp</code></a> in our <code>incremental0</code> directory.</p>
+      <p>Compile and run your code the same way, but without the <code>_Bad</code> suffix because well, now our code is not as bad, apparently. Note we're not actually compiling our code using compiler optimizations yet. We'll do that later when we get to some heavier computation. The program should output some text and then crash on an assertion failure since it, correctly, disallows negative indices:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>Indices: 
+2
+1
+0
+Indices: 
+3
+8
+9
+GridIndexing: GridIndexing.cpp:33: GridIndices floor(const Vector3d&amp;, const Vector3d&amp;, double): Assertion `p_lc_over_dx[0] &gt;= 0.0' failed.
+Aborted (core dumped)</pre>
+        </div>
+      </div>
+      <p>Now that we've finished computing the index of the grid cell that contains any given particle position, let's work on implementing the function to compute the barycentric weights of a given point. To determine the weights of a particular particle position, as we saw above, we do need to know which cell contains it. The <code>floor</code> function we just implemented does exactly that. Let's use the indices returned by the <code>floor</code> function as inputs into our barycentric weight calculator function, which we'll call <code>weights</code>, following Bargteil and Shinar's code. Let's again make the function stateless, which is a bit different from their implementation. So, the function will have as input the particle position, the grid's lower corner point, the grid spacing, and the indices of the cell containing the particle's position. The value we return this time will be a 3D vector of <code>double</code>s, which are the barycentric weights of the particle position's in that cell.</p>
+      <p>Notice here that we'll be repeating some calculations here, like the subtraction of the particle's position by the grid's lower corner position and division of all of that by the grid spacing. But we'll deal with that inefficiency later when we get to a more complete program; for now, let's implement this function with the parameters we described above, in a little test program called <a target="_blank" href=""><code>GridWeights.cpp</code></a>, still in the <code>incremental0</code> directory.</p>
+      <p>Compile and run this code the same way we did with the last two files. The output is:</p>
+      <div class="outer">
+        <div class="inner">
+          <pre>Indices: 
+0
+3
+4
+Weights = 
+0.5
+  0
+0.5
+
+Indices: 
+ 3
+ 4
+16
+Weights = 
+0.5
+0.5
+  0
+
+Indices: 
+0
+0
+0
+Weights = 
+0
+0
+0
+          </pre>
+        </div>
+      </div>
+      <p>That completes our work on the theory and implementation of the grid cell index and barycentric weight computation!</p>
+      <p>Notice we declared the <code>floor</code> and <code>weights</code> functions as <code>inline</code>, as in Bargteil and Shinar's code. This isn't necessary to do for these little test programs, but does promote efficiency in larger programs by making the compiler do the work of basically replacing any call to these functions with the actual code inside the functions to avoid an extra function call being stacked onto the call stack of our running programs.</p>
+      <h2 id="Splatting_Particle_Velocities_onto_Grid_in_2D">Splatting Particle Velocities onto the Grid in 2D</h2>
+      <p>Now that we know how to break down a particle's position into its grid cell's indices and the barycentric weights of its location within the grid cell, let's look at one important step of the FLIP algorithm: <i>splatting</i> the particle's velocity onto nearby grid velocity components. What is splatting and why do we do it?</p>
+      <p>As we mentioned earlier, in hybrid fluid simulation algorithms that use both particles and grids, we will repeatedly map from particles to the grid and from the grid back to the particles. Splatting is the process of mapping from the particles to the grid. In this case we will just focus on splatting particle velocities onto the velocity components of nearby cells in a staggered grid.</p>
+      <p>Since there will be a lot of gymnastics involving indices in the splatting process, we will go through it carefully. It can get really confusing to just look at the algorithm or implementation, without much explanation, as it is full of <i>w</i>s and indices with +1s and -1s all over the place. A lot of conceptual detail is actually hidden by the implementation of splatting in code form, so we'll break it down here and then build up the implementation in C++ after completing our understanding of the algorithm mathematically.</p>
+      <p>The general idea of splatting is that every particle has some influence over not only the grid cell it is currently in, but also potentially some neighboring grid cells. We get to define exactly how much influence the particle has over the velocity components of neighboring grid cells and how big that neighborhood even is. The figure below illustrates this very general idea. It's formalizing the idea of popping a water balloon and watching the water go <i>splat!</i>, making a huge mess all over the unfortunate grid cells near it.</p>
+      <p><img src="ParticleRegionInfluence.png" style="width: 75%; border-style: none;" class="center"></img></p>
+      <p>We'll build up the splatting algorithm used in the FLIP code provided with <a href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">Bargteil and Shinar's SIGGRAPH course</a>. The code defines the region of influence of a particle as follows. First, draw an imaginary grid cell around the particle's current location. Second, determine which actual grid cells' interiors overlap with that imaginary grid cell. Those are the grid cells whose velocities will be updated based on the particle's velocity. As we'll see later, the change to each velocity vector will be proportional to the amount of overlap between the imaginary grid cell of the particle and the portion of the actual grid cell that borders that velocity vector's location.</p>
+      <p>Let's start by examining a one-dimensional example of one part of the splatting algorithm. To determine the grid cells that overlap an imaginary grid cell centered on a particular particle, we do a negative shift by half a grid cell width from a particle's position; this would be the lower (left) end of the imaginary grid cell centered on the particle. The figure below illustrates this.</p>
+      <p><img src="HalfShift1D.gif" style="border-style: none;" class="center"></img></p>
+      <p>The shift works like this: subtract &Delta;<i>x</i>/2 from the particle's location, <i>x</i>, and note in which cell you end up. You can convince yourself that if <i>x</i> is less than halfway into grid cell <i>i</i>, then <i>x</i> - &Delta;<i>x</i>/2 will be in grid cell <i>i</i> - 1. If <i>x</i> is halfway or more into grid cell <i>i</i>, then shifting it left by a half-grid-cell-width (&Delta;<i>x</i>/2) will keep it within grid cell <i>i</i>. Note that if <i>x</i> is exactly halfway into grid cell <i>i</i>, then shifting it left by half a grid cell width lands it exactly at the left end of grid cell <i>i</i>, which we still consider to be in grid cell <i>i</i> and not <i>i</i> - 1. Another way of saying this is, if the barycentric weight, <i>w</i><sub>0</sub> of <i>x</i> in grid cell <i>i</i> is less than &frac12;, then the left shift will land you in grid cell <i>i</i> - 1, while otherwise the left shift will keep you in grid cell <i>i</i>.</p>
+      <p>Now, let's examine a more comprehensive version of a 2D version of the splatting algorithm (the final algorithm we'll implement is only in 3D, but some aspects are easier to visualize in 2D first), which will include not only a negative half-grid-cell-width shift, but also some contributions from a particle's velocity to velocity components of grid cells within the particle's region of influence.</p>
+      <p>Let <i>p</i> be a particle at position (<i>x</i>, <i>y</i>) in a 2D staggered grid. Assume (<i>x</i>, <i>y</i>) is in the <i>bottom half</i> of cell (<i>i</i>, <i>j</i>). (Later, we'll look at the top half case.) Here is a diagram of this particle in the bottom half of its grid:</p>
+      <p><img src="Particle2DBottomHalf.png" style="border-style: none;" class="center"></img></p>
+      <p>The 2D simplified version of our splatting algorithm works like this. First, shift down half a grid cell width from the particle's position to get a new position, (<i>x</i>, <i>y</i> - &Delta;<i>x</i> / 2), which is located in the cell below (<i>i</i>, <i>j</i>), which is cell (<i>i</i>, <i>j</i> - 1):</p>
+      <p><img src="Particle2DBottomHalfShiftDown.png" style="border-style: none;" class="center"></img></p>
+      <p>Next, compute the barycentric weights, <i>w</i><sub>0</sub> and <i>w</i><sub>1</sub>, of that point in cell (<i>i</i>, <i>j</i> - 1):</p>
+      <p><img src="Particle2DBottomHalfWeights.png" style="border-style: none;" class="center"></img></p>
+      <p>We will use those weights to <i>splat</i>, or contribute, weighted versions of the particle's own velocity, <i>u<sub>p</sub></i>, to the horizontal velocity components on either side of grid cells (<i>i</i>, <i>j</i> - 1) and (<i>i</i>, <i>j</i>). Here are those velocity components of those two grid cells, <i>before</i> splatting:</p>
+      <p><img src="Particle2DBottomHalfVelocities.png" style="border-style: none;" class="center"></img></p>
+      <p>Finally, here is how the splatting works. We add (1 - <i>w</i><sub>0</sub>)(1 - <i>w</i><sub>1</sub>)<i>u<sub>p</sub></i> to the left velocity component of grid cell (<i>i</i>, <i>j</i> - 1). We add <i>w</i><sub>0</sub>(1 - <i>w</i><sub>1</sub>)<i>u<sub>p</sub></i> to the right velocity component of the same cell. For cell (<i>i</i>, <i>j</i>), we add (1 - <i>w</i><sub>0</sub>)<i>w</i><sub>1</sub><i>u<sub>p</sub></i> to the left velocity component and <i>w</i><sub>0</sub><i>w</i><sub>1</sub><i>u<sub>p</sub></i> to the right velocity component:</p>
+      <p><img src="Particle2DBottomHalfSplat.png" style="border-style: none;" class="center"></img></p>
+      <p>The figure above reveals how we define the "neighborhood" of the particle, i.e., the region of the grid where fluid velocities are influenced by this particle's velocity. Let's also try to get a little more intuition on what the weights are doing for us here. Notice that if the particle had been a bit more to the left (but still in the same cell), then <i>w</i><sub>0</sub> would have been smaller. That would mean (1 - <i>w</i><sub>0</sub>) would have been bigger. But that, in turn, would mean the particle's velocity would have contributed more strongly to the left velocity components of grid cells (<i>i</i>, <i>j</i> - 1) and (<i>i</i>, <i>j</i>), since those velocity component contributions are multiplied by (1 - <i>w</i><sub>0</sub>). So, if the particle is more toward the left side of a grid cell, it contributes more to the left-side velocity components of its neighboring grid cells. That seems reasonable, right?</p>
+      <p>How does this work for the right-side velocity components? Well, if the particle is further to the right side of its grid cell, then <i>w</i><sub>0</sub> is bigger, which means the particle's velocity contributes more to the right-side velocity components of the same grid cells since those contributions are multiplied by <i>w</i><sub>0</sub>.</p>
+      <p>What about the vertical weight, <i>w</i><sub>1</sub>? Well, the same reasoning applies. The lower the particle's position, the smaller <i>w</i><sub>1</sub> for its downward-shifted position would be. The smaller <i>w</i><sub>1</sub> is, the bigger (1 - <i>w</i><sub>1</sub>) is, so the more the particle's velocity contributes to grid cell (<i>i</i>, <i>j</i> - 1)'s left and right velocity components (since they are multiplied by (1 - <i>w</i><sub>1</sub>). On the other hand, the higher the particle is, the greater <i>w</i><sub>1</sub> is, so the more the particle's velocity contributes to grid cell (<i>i</i>, <i>j</i>)'s left and right velocity components (since they are multiplied by <i>w</i><sub>1</sub>).</p>
+      <p>In fact, </p>
+      <p>Here is an animated version of this whole process:</p>
+      <p><img src="ShiftDownDiffCell2D.gif" style="border-style: none;" class="center"></img></p>
+      <p>That's it for the case where the particle is in the bottom half of its grid cell! Now, let's examine how the same process works when the particle is in the top half of its grid cell, or, exactly in the middle vertically in its grid cell (we consider both to be the same case, just as we did with the 1D shifting example above).</p>
+      <p>So, how does this process work when a particle is in the <i>top</i> half of its grid cell? Well, since we start higher up in the grid cell, ...</p>
+      <p><img src="Particle2DTopHalf.png" style="border-style: none;" class="center"></img></p>
+      <p>... we end up remaining in that grid cell even when we shift down by half a grid cell width:</p>
+      <p><img src="Particle2DTopHalfShiftDown.png" style="border-style: none;" class="center"></img></p>
+      <p>Next, we compute the barycentric weights, just like before, but relative to the cell the shifted location is in, which is the original cell (<i>i</i>, <i>j</i>), unlike in the bottom-half case above:</p>
+      <p><img src="Particle2DTopHalfWeights.png" style="border-style: none;" class="center"></img></p>
+      <p>We will splat the particle's velocity onto its four neighboring velocities, as before. But unlike the bottom-half case above, we will splat the particle velocity onto the horizontal velocity components of grid cells (<i>i</i>, <i>j</i>) and (<i>i</i>, <i>j</i> + 1)! Technically we're still following the same process as before; it's just that since the downward-shifted position from the particle's position remained within the particle's grid cell, the shifted point's cell and the cell above it just happen to be a different pair of cells:</p>
+      <p><img src="Particle2DTopHalfVelocities.png" style="border-style: none;" class="center"></img></p>
+      <p>The splatting process works identically to before, but again, just on this higher pair of grid cells:</p>
+      <p><img src="Particle2DTopHalfSplat.png" style="border-style: none;" class="center"></img></p>
+      <p>Finally, here's an animated version of this whole process for the case where the particle is in the top half of its grid cell:</p>
+      <p><img src="ShiftDownSameCell2D.gif" style="border-style: none;" class="center"></img></p>
+      <p>Note that we can think of this process as transferring velocities from particles to <i>every</i> velocity on the grid; it's just that the contribution of the particle's velocity to the grid velocity components other than these four neighboring velocity components is zero.</p>
+      <p>Now, all of that gymnastics was just for splatting the horizontal velocity of the particle onto horizontal velocity components on the grid. We also have to do the same thing for the vertical components! Without going through the same level of very repetitive detail, I'll just say the process works identically in that direction; you just do a left shift by half a grid cell width instead of a downward shift, and repeat the same process.</p>
+      <p>But what exactly is this all doing? Why do we use the weights in this particular way? Is there any more insight we can get into the method behind the madness?</p>
+      <p>Well, it turns out that if you draw an imaginary grid cell centered on each of the four velocity components that get updated, and another imaginary grid cell centered on the particle's position, the fraction of the particle's velocity that each of the grid velocity components gets is exactly equal to the proportion of area overlap between the particle-centered grid cell and each velocity-centered grid cell. What?! Let's describe that a bit more slowly with pictures.</p>
+      <p>First, recall that we start with a particle position:</p>
+      <p><img src="AreaInterp1.png" style="border-style: none;" class="center"></img></p>
+      <p>And then we shift downward by half a grid cell width and compute the barycentric weights of the resulting position in whatever cell you land:</p>
+      <p><img src="AreaInterp2.png" style="border-style: none;" class="center"></img></p>
+      <p>Recall that for this case, where the particle is in the top half of its grid cell, the four horizontal velocity components it'll influence are the ones next to that cell and the cell above it:</p>
+      <p><img src="AreaInterp3.png" style="border-style: none;" class="center"></img></p>
+      <p>Now, draw imaginary grid cells centered at the locations of those four velocity components:</p>
+      <p><img src="AreaInterp4.png" style="border-style: none;" class="center"></img></p>
+      <p>Then draw an imaginary grid cell centered on the particle's position:</p>
+      <p><img src="AreaInterp5.png" style="border-style: none;" class="center"></img></p>
+      <p>What is the area of overlap between the particle's imaginary grid cell and each of the velocity components' grid cells?</p>
+      <p><img src="AreaInterp6.png" style="border-style: none;" class="center"></img></p>
+      <p>To help us calculate these areas, let's define a few horizontal vectors:</p>
+      <p><img src="AreaInterp7.png" style="border-style: none;" class="center"></img></p>
+      <p>And a few vertical ones:</p>
+      <p><img src="AreaInterp8.png" style="border-style: none;" class="center"></img></p>
+      <p>Note that by the definition of the downward shift process, we can reach the particle's position by starting at the lower corner of the grid cell into which we shifted, going right by <i>w</i><sub>0</sub> &middot; &Delta;<i>x</i>, going up by <i>w</i><sub>1</sub> &middot; &Delta;<i>x</i>, and then going up by &frac12;&Delta;<i>x</i>:</p>
+      <p><img src="AreaInterp9.png" style="border-style: none;" class="center"></img></p>
+      <p>Then, you can reach the lower left corner of the particle-centered imaginary grid cell by going down by &frac12;&Delta;<i>x</i> and then left by &frac12;&Delta;<i>x</i>:
+      <p><img src="AreaInterp10.png" style="border-style: none;" class="center"></img></p>
+      <p>Then you can reach the other corners by going up by &Delta;<i>x</i>:</p>
+      <p><img src="AreaInterp11.png" style="border-style: none;" class="center"></img></p>
+      <p>Right by &Delta;<i>x</i>:</p>
+      <p><img src="AreaInterp12.png" style="border-style: none;" class="center"></img></p>
+      <p>And right from the lower left corner by &Delta;<i>x</i>:</p>
+      <p><img src="AreaInterp13.png" style="border-style: none;" class="center"></img></p>
+      <p>We can reach the point at the top of this grid cell and halfway across by starting at the lower left corner of the grid cell, going right by &frac12;&Delta;<i>x</i> and up by &Delta;<i>x</i>:</p>
+      <p><img src="AreaInterp14.png" style="border-style: none;" class="center"></img></p>
+      <p>Doing a little vector algebra, e.g., subtracting that last point by the top left corner of the particle-centered imaginary grid cell, we see that the rectangle whose diagonally opposite corners are those two points is a (1 - <i>w</i><sub>0</sub>) &#10005; <i>w</i><sub>1</sub> rectangle:</p>
+      <p><img src="AreaInterp15.png" style="border-style: none;" class="center"></img></p>
+      <p>So its area is (1 - <i>w</i><sub>0</sub>)<i>w</i><sub>1</sub>(&Delta;<i>x</i>)<sup>2</sup>:</p>
+      <p><img src="AreaInterp16.png" style="border-style: none;" class="center"></img></p>
+      <p>Similar vector algebra will reveal that the area of the top right rectangle of overlap is <i>w</i><sub>0</sub><i>w</i><sub>1</sub>(&Delta;<i>x</i>)<sup>2</sup>, the area of the bottom left rectangle of overlap is (1 - <i>w</i><sub>0</sub>)(1 - <i>w</i><sub>1</sub>)(&Delta;<i>x</i>)<sup>2</sup>, and the area of the bottom right rectangle of overlap is <i>w</i><sub>0</sub>(1 - <i>w</i><sub>1</sub>)(&Delta;<i>x</i>)<sup>2</sup>:</p>
+      <p><img src="AreaInterp17.png" style="border-style: none;" class="center"></img></p>
+      <p>The area of a grid cell is (&Delta;<i>x</i>)<sup>2</sup>, so we could say the areas of these rectangles are the fractions (1 - <i>w</i><sub>0</sub>)(1 - <i>w</i><sub>1</sub>), <i>w</i><sub>0</sub>(1 - <i>w</i><sub>1</sub>), (1 - <i>w</i><sub>0</sub>)<i>w</i><sub>1</sub>, and <i>w</i><sub>0</sub><i>w</i><sub>1</sub> of a grid cell. Remember where we've seen these before! These are the coefficients we multiply the particle's horizontal velocity by to get the particle's contributions to the four velocities it influences!</p>
+      <p><img src="AreaInterp18.png" style="border-style: none;" class="center"></img></p>
+      <p>So, you can think of it like this:</p>
+      <p><img src="AreaInterp19.png" style="border-style: none;" class="center"></img></p>
+      <p>That is, the particle exerts influence onto its neighboring velocity components. The amount of influence it exerts on each velocity component is proportional to how much its imaginary grid cell overlaps each velocity component's imaginary grid cell! This is called <i>area-weighted interpolation</i> and is used in a variety of related operations in computational fluid dynamics and computer graphics. For example, on page 15 (page 18 of the PDF) of <a href="https://www.osti.gov/biblio/4769185-particle-cell-method-numerical-solution-problems-fluid-dynamics">a report by Francis H. Harlow (1962)</a>, who was one of the primary creators of the FLIP algorithm and its predecessor, the PIC (Particle-in-Cell) algorithm, a related "velocity weighting procedure" of mapping from the grid velocities to a particle's velocity is described. Similarly, Figure 3 of a key <a href="https://www.cbim.rutgers.edu/dmdocuments/gmip96%20Foster.pdf">paper by Foster and Metaxas (1996)</a> that introduced computational fluid dynamics to computer graphics illustrates an area-weighted interpolation scheme for mapping the velocity of a "marker particle" (a slightly different concept than our actual fluid particles) based on grid velocities.</p>
+      <p>Note that for all particles we use to model a fluid, we would repeat this process: for each particle, splat its velocities onto the grid via this process. FLIP fluid simulation algorithms use a variety of approaches for finding these neighboring grid cells for splatting, or transferring, velocities from particles to the grid. In this case, we are using our area-weighted interpolation approach for the particle-to-grid transfer. In fact, this transfer of velocities from particles to the grid is probably more in line with the original hybrid particle/grid fluid simulation algorithm, the Particle-in-Cell (PIC) algorithm. FLIP maps <i>changes</i> in velocities from particles to the grid. See the <a href="https://www.cs.ucr.edu/~shinar/papers/2019-mac-apic.pdf">paper by Ding et al. (2019)</a> for a more detailed introduction to this topic.</p>
+      <h2 id="Splatting_Particle_Velocities_onto_Grid_in_3D">Splatting Particle Velocities onto the Grid in 3D</h2>
+      <p>The figures below show how we will illustrate the three-dimensional neighborhood of grid cells around a particle. We'll spread adjacent grid cells in a slice of cells apart for easier viewing:</p>
+      <p><img src="BreakApart3DGrid.gif" style="border-style: none;" class="center"></img></p>
+      <p>We'll also spread the <i>z</i> direction slices of grid cells out from each other so it's easier to see things without overlap.</p>
+      <p><img src="Grid3DSlices.gif" style="border-style: none;" class="center"></img></p>
+      <p>Splatting in 3D works the same as 2D, with a few small changes to account for the extra dimension. We still shift half a grid cell width from the particle's position, but we do it now in <i>two</i> coordinate directions instead of one. We also still splat the particle's velocity onto neighboring grid velocities, but now we will have eight grid velocity components to update instead of just four.</p>
+      <p>Here is the whole 3D splatting procedure, in three parts. The first part is the update of the <i>x</i>-direction grid velocity components:
+      <ul>
+        <li>Shift from the particle's position, (<i>x</i>, <i>y</i>, <i>z</i>) by -&Delta;<i>x</i>/2 in the <i>y</i> and <i>z</i> directions to the point (<i>x</i>, <i>y</i> - &Delta;<i>x</i>/2, <i>z</i> - &Delta;<i>x</i>/2).</li>
+        <li>Calculate the barycentric weights of that shifted position relative to the cell containing that point. If you shifted onto a cell boundary, assume you're in the cell with the higher index in the relevant coordinate direction(s).</li>
+        <li>Splat the particle's <i>u</i> velocity (the <i>x</i> component of its velocity) onto the <i>u</i> velocity components of the grid cell containing this shifted position. Also splat the particle's <i>u</i> velocity component onto the <i>u</i> velocity components of the grid cell in front of, the grid cell above, and the grid cell diagonally in front of and above, that grid cell containing the shifted position.</li>
+      </ul>
+      </p>
+      <p>The second part of the 3D splatting algorithm is the update of grid velocities in the <i>y</i> direction:
+      <ul>
+        <li>Shift from the particle's position, (<i>x</i>, <i>y</i>, <i>z</i>), by -&Delta;<i>x</i>/2 in the <i>x</i> and <i>z</i> directions to the point (<i>x</i> - &Delta;<i>x</i>/2, <i>y</i>, <i>z</i> - &Delta;<i>x</i>/2).</li>
+        <li>Calculate the barycentric weights of that shifted position relative to the cell containing that point. If you shifted onto a cell boundary, assume you're in the cell with the higher index in the relevant coordinate direction(s).</li>
+        <li>Splat the particle's <i>v</i> velocity (the <i>y</i> component of its velocity) onto the <i>v</i> velocity components of the grid cell containing this shifted position. Also splat the particle's <i>v</i> velocity component onto the <i>v</i> velocity components of the grid cell to the right of, in front of, and diagonally to the right and in front of, that grid cell containing the shifted position.</li>
+      </ul>
+      </p>
+      <p>The third part of the 3D splatting algorithm is the update of grid velocities in the <i>z</i> direction:
+      <ul>
+        <li>Shift from the particle's position, (<i>x</i>, <i>y</i>, <i>z</i>), by -&Delta;<i>x</i>/2 in the <i>x</i> and <i>y</i> directions to the point (<i>x</i> - &Delta;<i>x</i>/2, <i>y</i> - &Delta;<i>x</i>/2, <i>z</i>).</li>
+        <li>Calculate the barycentric weights of that shifted position relative to the cell containing that point. If you shifted onto a cell boundary, assume you're in the cell with the higher index in the relevant coordinate direction(s).</li>
+        <li>Splat the particle's <i>w</i> velocity (the <i>z</i> component of its velocity) onto the <i>w</i> velocity components of the grid cell containing this shifted position. Also splat the particle's <i>w</i> velocity component onto the <i>w</i> velocity components of the grid cell to right of, above, and diagonally above and to the right of, that grid cell containing the shifted position.</li>
+      </ul>
+      </p>
+      <p>As with the 2D splatting algorithm, all of these parts of the 3D splatting algorithm are done once for each particle in the entire simulation, in each time step.</p>
+      <p>Now, implementing this algorithm can actually be done in a very small amount of code, but understanding how it works is complicated by the fact that, in each of the three parts of the algorithm above, the shift step can end up in different grid cells depending on where exactly the particle was located in its original cell. Let's look at this carefully.</p>
+      <p>For the first part of the splatting algorithm, the negative half-grid-cell-width shift in the <i>y</i> and <i>z</i> directions will land you in one of four possible grid cells, depending on in which quadrant of its current grid cell the particle is located:</p>
+      <p><img src="Splat3D_1.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 1: shift to the cell diagonally below and back:</p>
+      <p><img src="Splat3D_2.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_3.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_4.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 2: shift to the cell below:</p>
+      <p><img src="Splat3D_5.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_6.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_7.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 3: shift to the cell behind the particle's cell:</p>
+      <p><img src="Splat3D_8.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_9.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_10.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 4: stay in the same grid cell after the shift:</p>
+      <p><img src="Splat3D_11.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_12.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_13.png" style="border-style: none;" class="center"></img></p>
+      <p>For the second part of the splatting algorithm, the negative shift in the <i>x</i> and <i>z</i> directions will land you in one of four possible grid cells, depending on in which quadrant of its current grid cell the particle is located:</p>
+      <p><img src="Splat3D_14.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 1: shift to the cell diagonally left and back:</p>
+      <p><img src="Splat3D_15.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_16.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_17.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 2: shift to the cell to the left:</p>
+      <p><img src="Splat3D_18.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_19.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_20.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 3: shift to the cell behind the particle's cell:</p>
+      <p><img src="Splat3D_21.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_22.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_23.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 4: stay in the same grid cell after the shift:</p>
+      <p><img src="Splat3D_24.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_25.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_26.png" style="border-style: none;" class="center"></img></p>
+      <p>For the third part of the splatting algorithm, the negative shift in the <i>x</i> and <i>y</i> directions will land you in one of four possible grid cells, depending on in which quadrant of its current grid cell the particle is located:</p>
+      <p><img src="Splat3D_27.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 1: shift to the cell diagonally left and down:</p>
+      <p><img src="Splat3D_28.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_29.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_30.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 2: shift to the cell to the left:</p>
+      <p><img src="Splat3D_31.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_32.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_33.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 3: shift to the cell below the particle's cell:</p>
+      <p><img src="Splat3D_34.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_35.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_36.png" style="border-style: none;" class="center"></img></p>
+      <p>Case 4: stay in the same grid cell after the shift:</p>
+      <p><img src="Splat3D_37.png" style="border-style: none;" class="center"></img></p>
+      <p>In that case, the velocity components we update are:</p>
+      <p><img src="Splat3D_38.png" style="border-style: none;" class="center"></img></p>
+      <p>And here's how we update them:</p>
+      <p><img src="Splat3D_39.png" style="border-style: none;" class="center"></img></p>
+      <p>Note that all this gymnastics with shifting and indexing is doing the exact same thing we did in the 2D case: the shift finds the lower corner of the imaginary grid cell centered at the particle, and then we use the weighted volumes of overlap between that cell and the imaginary grid cell centered around each of the neighboring grid velocity components.</p>
+      <p>Interestingly, in the diagrams above, if we let (<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>) denote the grid cell you shifted <i>into</i>, then after the shift in the <i>y</i> and <i>z</i> directions, we <i>always</i> update the <i>u</i> velocities on either side of these four grid cells:
+      <ul>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub> + 1)</li>
+      </ul></p>
+      <p><img src="Splat3D_X1.png" style="border-style: none;" class="center"></img></p>
+      <p>Similarly, after the shift in the <i>x</i> and <i>z</i> directions, we <i>always</i> update the <i>v</i> velocities on either side of these four grid cells:
+      <ul>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+      </ul></p>
+      <p><img src="Splat3D_Y1.png" style="border-style: none;" class="center"></img></p>
+      <p>And after the shift in the <i>y</i> and <i>z</i> directions, we <i>always</i> update the <i>w</i> velocities on either side of these four grid cells:
+      <ul>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+      </ul></p>
+      <p><img src="Splat3D_Z1.png" style="border-style: none;" class="center"></img></p>
+      <p>Now recall that, our indexing scheme getting rid of the &frac12;s in our indices makes the -&frac12;s disappear and the +&frac12;s become +1s:</p>
+      <p><img src="Splat3D_X2.png" style="border-style: none;" class="center"></img></p>
+      <p><img src="Splat3D_Y2.png" style="border-style: none;" class="center"></img></p>
+      <p><img src="Splat3D_Z2.png" style="border-style: none;" class="center"></img></p>
+      <p>Let's list all the velocities we end up updating that are shown in the diagrams above with the indexing scheme we use in our code for the staggered grid's 3D arrays of velocities. The velocities we end up updating in our staggered grid's 3D arrays of velocities, based on the <i>u</i> velocity-update list above, are (note that <i>i</i><sub>shifted</sub> can be <i>i</i> or <i>i</i> - 1, <i>j</i><sub>shifted</sub> can be <i>j</i> or <i>j</i> - 1, and <i>k</i><sub>shifted</sub> can be <i>k</i> or <i>k</i> - 1 as in the diagrams above depending on where the shift lands, so <i>i</i><sub>shifted</sub> + 1 would be either <i>i</i> or <i>i</i> + 1, <i>j</i><sub>shifted</sub> + 1 would be either <i>j</i> or <i>j</i> + 1, and <i>k</i><sub>shifted</sub> + 1 would be either <i>k</i> or <i>k</i> + 1):
+      <ul>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>u</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub> + 1)</li>
+      </ul></p>
+      <p>And the velocities we end up updating in the 3D array of <i>v</i> velocities are:
+      <ul>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>v</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub> + 1)</li>
+      </ul></p>
+      <p>And the velocities we end up updating in the 3D array of <i>w</i> velocities are:
+      <ul>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub>, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub>, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub> + 1)</li>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub>)</li>
+        <li><i>w</i>(<i>i</i><sub>shifted</sub> + 1, <i>j</i><sub>shifted</sub> + 1, <i>k</i><sub>shifted</sub> + 1)</li>
+      </ul></p>
+      </p>
+      <p>So, we can use the same set of indices (<i>i</i>, <i>j</i>, <i>k</i> of the cell containing the shifted particle position, each plus 1 or not) to access every velocity component in every direction that we need to update! Putting it all together, the whole 3D splatting algorithm will work like this (as you can also see in Bargteil and Shinar's <code>fluid.cpp</code> file):</p>
+      <p>
+      <ul>
+        <li>Let <i>p.pos</i> = (<i>x</i>, <i>y</i>, <i>z</i>) denote the position of the particle <i>p</i> at the current time step.</li>
+        <li>Part 1: Splat horizontal velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i>, <i>y</i> - &Delta;<i>x</i> / 2, <i>z</i> - &Delta;<i>x</i> / 2).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>u<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>u</i><sub>grid</sub>): This splats the particle's horizontal velocity, <i>u<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>u</i><sub>grid</sub>, of horizontal velocity components on the grid.</li>
+          </ul>
+        </li>
+        <li>Part 2: Splat vertical velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i> - &Delta;<i>x</i> / 2, <i>y</i>, <i>z</i> - &Delta;<i>x</i> / 2).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>v<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>v</i><sub>grid</sub>): This splats the particle's vertical velocity, <i>v<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>v</i><sub>grid</sub>, of vertical velocity components on the grid.</li>
+          </ul>
+        </li>
+        <li>Part 3: Splat depth (<i>z</i> direction) velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i> - &Delta;<i>x</i> / 2, <i>y</i> - &Delta;<i>x</i> / 2, <i>z</i>).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>w<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>w</i><sub>grid</sub>): This splats the particle's depth velocity, <i>w<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>w</i><sub>grid</sub>, of depth velocity components on the grid.</li>
+          </ul>
+        </li>
+      </ul>
+      </p>
+      <p>Where the splat function is:</p>
+      <p>splat(vel<sub><i>p</i></sub>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, vel<sub>grid</sub>):
+        <ul>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i>, <i>k</i>) += (1 - <i>w</i><sub>0</sub>) &middot; (1 - <i>w</i><sub>1</sub>) &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i>, <i>k</i>) += <i>w</i><sub>0</sub> &middot; (1 - <i>w</i><sub>1</sub>) &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i> + 1, <i>k</i>) += (1 - <i>w</i><sub>0</sub>) &middot; <i>w</i><sub>1</sub> &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i> + 1, <i>k</i>) += <i>w</i><sub>0</sub> &middot; <i>w</i><sub>1</sub> &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i>, <i>k</i> + 1) += (1 - <i>w</i><sub>0</sub>) &middot; (1 - <i>w</i><sub>1</sub>) &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i>, <i>k</i> + 1) += <i>w</i><sub>0</sub> &middot; (1 - <i>w</i><sub>1</sub>) &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i> + 1, <i>k</i> + 1) += (1 - <i>w</i><sub>0</sub>) &middot; <i>w</i><sub>1</sub> &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i> + 1, <i>k</i> + 1) += <i>w</i><sub>0</sub> &middot; <i>w</i><sub>1</sub> &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+      </ul></p>
+      <p>Note that (<i>i</i>, <i>j</i>, <i>k</i>) here are the indices of the cell containing the <i>shifted</i> particle position, which may be different for each of the shifts we do in the three different parts of the 3D splatting algorithm.</p>
+      <p>Anyway, because of our indexing scheme, all of these different cases of shifting in different coordinate directions and splatting onto neighboring grid cell velocities just works, by calling this one fixed splat function three times with different inputs!</p>
+      <p>But there's a problem!</p>
+      <h2 id="Normalizing_Splatted_Velocities">Normalizing Splatted Velocities</h2>
+      <p>What would happen if we had a ton of particles influencing certain grid velocities?</p>
+      <p><img src="SplatTooManyParticles.png" style="border-style: none;" class="center"></img></p>
+      <p>Basically, we would keep adding, and adding, and adding, and adding more and more weighted particle velocities to those grid velocities. If you had a hundred million particles all moving at 6 m/s in a direction parallel to a grid velocity and having their imaginary cells overlapping half the volume of a grid velocity's imaginary cell, your fluid velocity would exceed the speed of light (which is just under 300 million m/s)! Sorry, but your fluid is <i>not</i> moving that fast! Okay that's an extreme example, but the point is, we don't want fluid velocities to be huge just because there are a lot of particles near them. So, we need to <i>normalize</i> the value of each grid velocity component after splatting, to have it be a sort of average velocity of all particle velocities splatted onto it, rather than just a sum of those splatted particle velocities.</p>
+      <p>One approach, taken by the code associated with <a href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">Bargteil and Shinar's SIGGRAPH course</a>, is to keep adding up the volumes of overlap between the imaginary grid cell centered on each grid velocity component and the imaginary grid cell centered on each particle. That is, each time we add a particle's weighted velocity component to a grid velocity component, in parallel we sum just the weights, e.g., add up all the (1 - <i>w</i><sub>0</sub>)<i>w</i><sub>1</sub>(1 - <i>w</i><sub>2</sub>) factors for each particle's contribution to the grid velocity component <i>u</i><sub>3 + &frac12;, 1, 7</sub> and so on for each grid velocity component. Then, when we're done splatting all particle velocity components onto the relevant grid velocity components, we divide each grid velocity component by that corresponding sum of all weights (volumes of overlap) of particle velocity contributions we added to that grid velocity component.</p>
+      <p>Let's modify our splatting algorithm above to add this normalization step for each velocity component in the grid. Let's also add an important detail, which is that all of the grid velocity values and all of these weight/volume sums need to be zeroed out at the beginning of our splatting algorithm (new steps are in <b>bold</b>):
+      <ul>
+        <li>Let <i>p.pos</i> = (<i>x</i>, <i>y</i>, <i>z</i>) denote the position of the particle <i>p</i> at the current time step.</li>
+        <li><b>Set every single value in all of the 3D arrays of grid velocities, <i>u</i><sub>grid</sub>, <i>v</i><sub>grid</sub>, and <i>w</i><sub>grid</sub>, to zero.</b></li>
+        <li><b>As part of the staggered grid, just as we do with the 3D arrays <i>u</i><sub>grid</sub>, <i>v</i><sub>grid</sub>, and <i>w</i><sub>grid</sub>, store three additional 3D arrays, <i>f<sub>u</sub></i>, <i>f<sub>v</sub></i>, and <i>f<sub>w</sub></i>. Set all values in these arrays to zero as well.</b></li>
+        <li>Part 1: Splat horizontal velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i>, <i>y</i> - &Delta;<i>x</i> / 2, <i>z</i> - &Delta;<i>x</i> / 2).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>u<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>u</i><sub>grid</sub>, <b><i>f<sub>u</sub></i></b>): This splats the particle's horizontal velocity, <i>u<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>u</i><sub>grid</sub>, of horizontal velocity components on the grid. <b>Also, this function will accumulate the barycentric weight products (overlap volumes) of all particle contributions to each horizontal grid velocity.</b></li>
+          <li><b>For each (<i>i</i>, <i>j</i>, <i>k</i>), divide <i>u</i>(<i>i</i>, <i>j</i>, <i>k</i>) by <i>f<sub>u</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>).</b></li>
+          </ul>
+        </li>
+        <li>Part 2: Splat vertical velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i> - &Delta;<i>x</i> / 2, <i>y</i>, <i>z</i> - &Delta;<i>x</i> / 2).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>v<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>v</i><sub>grid</sub>, <b><i>f<sub>v</sub></i></b>): This splats the particle's vertical velocity, <i>v<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>v</i><sub>grid</sub>, of vertical velocity components on the grid. <b>Also, this function will accumulate the barycentric weight products (overlap volumes) of all particle contributions to each vertical grid velocity.</b></li>
+          <li><b>For each (<i>i</i>, <i>j</i>, <i>k</i>), divide <i>v</i>(<i>i</i>, <i>j</i>, <i>k</i>) by <i>f<sub>v</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>).</b></li>
+          </ul>
+        </li>
+        <li>Part 3: Splat depth (<i>z</i> direction) velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i> - &Delta;<i>x</i> / 2, <i>y</i> - &Delta;<i>x</i> / 2, <i>z</i>).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>w<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>w</i><sub>grid</sub>, <b><i>f<sub>w</sub></i></b>): This splats the particle's depth velocity, <i>w<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>w</i><sub>grid</sub>, of depth velocity components on the grid. <b>Also, this function will accumulate the barycentric weight products (overlap volumes) of all particle contributions to each depth grid velocity.</b></li>
+          <li><b>For each (<i>i</i>, <i>j</i>, <i>k</i>), divide <i>w</i>(<i>i</i>, <i>j</i>, <i>k</i>) by <i>f<sub>w</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>).</b></li>
+          </ul>
+      </ul></p>
+      <p>And here's how the splatting algorithm will do the additional work of accumulating those barycentric weight products (overlap volumes):</p>
+      <p>splat(vel<sub><i>p</i></sub>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, vel<sub>grid</sub>, <b>f<sub>vel</sub></b>):
+        <ul>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i>, <i>k</i>) += (1 - <i>w</i><sub>0</sub>) &middot; (1 - <i>w</i><sub>1</sub>) &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i>, <i>j</i>, <i>k</i>) += (1 - <i>w</i><sub>0</sub>) &middot; (1 - <i>w</i><sub>1</sub>) &middot; (1 - <i>w</i><sub>2</sub>)</b></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i>, <i>k</i>) += <i>w</i><sub>0</sub> &middot; (1 - <i>w</i><sub>1</sub>) &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i> + 1, <i>j</i>, <i>k</i>) += <i>w</i><sub>0</sub> &middot; (1 - <i>w</i><sub>1</sub>) &middot; (1 - <i>w</i><sub>2</sub>)</b></li>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i> + 1, <i>k</i>) += (1 - <i>w</i><sub>0</sub>) &middot; <i>w</i><sub>1</sub> &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i>, <i>j</i> + 1, <i>k</i>) += (1 - <i>w</i><sub>0</sub>) &middot; <i>w</i><sub>1</sub> &middot; (1 - <i>w</i><sub>2</sub>)</b></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i> + 1, <i>k</i>) += <i>w</i><sub>0</sub> &middot; <i>w</i><sub>1</sub> &middot; (1 - <i>w</i><sub>2</sub>) &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i> + 1, <i>j</i> + 1, <i>k</i>) += <i>w</i><sub>0</sub> &middot; <i>w</i><sub>1</sub> &middot; (1 - <i>w</i><sub>2</sub>)</b></li>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i>, <i>k</i> + 1) += (1 - <i>w</i><sub>0</sub>) &middot; (1 - <i>w</i><sub>1</sub>) &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i>, <i>j</i>, <i>k</i> + 1) += (1 - <i>w</i><sub>0</sub>) &middot; (1 - <i>w</i><sub>1</sub>) &middot; <i>w</i><sub>2</sub></b></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i>, <i>k</i> + 1) += <i>w</i><sub>0</sub> &middot; (1 - <i>w</i><sub>1</sub>) &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i> + 1, <i>j</i>, <i>k</i> + 1) += <i>w</i><sub>0</sub> &middot; (1 - <i>w</i><sub>1</sub>) &middot; <i>w</i><sub>2</sub></b></li>
+          <li>vel<sub>grid</sub>(<i>i</i>, <i>j</i> + 1, <i>k</i> + 1) += (1 - <i>w</i><sub>0</sub>) &middot; <i>w</i><sub>1</sub> &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i>, <i>j</i> + 1, <i>k</i> + 1) += (1 - <i>w</i><sub>0</sub>) &middot; <i>w</i><sub>1</sub> &middot; <i>w</i><sub>2</sub></b></li>
+          <li>vel<sub>grid</sub>(<i>i</i> + 1, <i>j</i> + 1, <i>k</i> + 1) += <i>w</i><sub>0</sub> &middot; <i>w</i><sub>1</sub> &middot; <i>w</i><sub>2</sub> &middot; vel<sub><i>p</i></sub></li>
+          <li><b>f<sub>vel</sub>(<i>i</i> + 1, <i>j</i> + 1, <i>k</i> + 1) += <i>w</i><sub>0</sub> &middot; <i>w</i><sub>1</sub> &middot; <i>w</i><sub>2</sub></b></li>
+      </ul></p>
+      <h2 id="Handling_Boundary_and_Cell_Labels">Handling the Boundary and Cell Labels</h2>
+      <p>In addition to our 3D arrays of velocities and accumulating barycentric weight products above, we'll also store a 3D array containing a label for each cell in the staggered grid. Each element of this cell labels array can take on three possible values: SOLID, FLUID, or EMPTY. In the fluid simulation code associated with Bargteil and Shinar's course, these labels are instead OBSTACLE, LIQUID, and AIR. Often "air" and "empty" mean the same thing since, as explained in the Boundary Conditions and later Marker Particles sections of <a href="">Bridson and M&uuml;ller-Fischer's course notes</a>, it's often most practical to just model air by not modeling it, i.e., assume it's just empty space with a pressure of zero. Our labeling convention follows that of Bridson and M&uuml;ller-Fischer's course notes, e.g., as explained in their course notes' Marker Particles section.</p>
+      <p>First, we'll go through all the grid cell labels and label every cell on the boundary as SOLID. Namely, these boundary cells are those with <i>i</i> = 0, <i>i</i> = <i>n<sub>x</sub></i> - 1, <i>j</i> = 0, <i>j</i> = <i>n<sub>y</sub></i> - 1, <i>k</i> = 0, or <i>k</i> = <i>n<sub>z</sub></i> - 1. Then, as we go through each particle to splat its velocity onto the grid, we'll label the cell containing that particle as FLUID. All other cells (i.e., those not on the boundary and not containing any fluid particles) will be labeled as EMPTY, for now.</p>
+      <p>There are a couple of important details we skipped in our earlier description of splatting. Namely, what happens at the boundaries? Does any part of the splatting algorithm take us outside the grid, and if so, how do we handle that? First, following the code from Bargteil and Shinar's course, we need to decide what grid velocities to assign at the boundaries of the grid. Let's do the following:
+      <ul>
+        <li>On any grid cell with a face on the outside of the grid, set the velocity at the center of that face, as well as the velocity at the center of the opposite face on that grid cell, to zero.</li>
+        <li>On any grid cell with a face on the outside of the grid, set the outermost velocity in any direction <i>not</i> perpendicular to the outer face equal to the corresponding velocity of the grid cell one layer inward.</li>
+      </ul></p>
+      <p>To make this a more precise algorithm, as the code associated with Bargteil and Shinar's course shows:
+      <ul>
+        <li>For all <i>j</i>, <i>k</i> in the grid:
+          <ul>
+            <li>u(0, j, k) = u(1, j, k) = u(nx - 1, j, k) = u(nx, j, k) = 0</li>
+            <li>v(0, j, k) = v(1, j, k)</li>
+            <li>w(0, j, k) = w(1, j, k)</li>
+            <li>v(nx - 1, j, k) = v(nx - 2, j, k)</li>
+            <li>w(nx - 1, j, k) = w(nx - 2, j, k)</li>
+          </ul>
+        </li>
+        <li>For all <i>i</i>, <i>k</i> in the grid:
+          <ul>
+            <li>v(i, 0, k) = v(i, 1, k) = v(i, ny - 2, k) = v(i, ny - 1, k) = 0</li>
+            <li>u(i, 0, k) = u(i, 1, k)</li>
+            <li>w(i, 0, k) = w(i, 1, k)</li>
+            <li>u(i, ny - 1, k) = u(i, ny - 2, k)</li>
+            <li>w(i, ny - 1, k) = w(i, ny - 2, k)</li>
+          </ul>
+        </li>
+        <li>For all <i>i</i>, <i>j</i> in the grid:
+          <ul>
+            <li>w(i, j, 0) = w(i, j, 1) = w(i, j, nz - 2) = w(i, j, nz - 1) = 0</li>
+            <li>u(i, j, 0) = u(i, j, 1)</li>
+            <li>v(i, j, 0) = v(i, j, 1)</li>
+            <li>u(i, j, nz - 1) = u(i, j, nz - 2)</li>
+            <li>v(i, j, nz - 1) = v(i, j, nz - 2)</li>
+          </ul>
+        </li>
+      </ul>
+      </p>
+      <p>Also, we could have a situation where so few (perhaps zero) particles are close to a particular grid velocity that one or more of the <i>f</i><sub>*</sub> values corresponding to that grid velocity might be very small or zero. In that case, we certainly do not want to normalize (i.e., divide) the grid velocity by it! So, in that case, we shall set the grid velocity directly to zero instead. Based on that decision, let's complete our 3D algorithm for splatting particle velocities onto grid velocities:</p>
+      <ul>
+        <li>Let <i>p.pos</i> = (<i>x</i>, <i>y</i>, <i>z</i>) denote the position of the particle <i>p</i> at the current time step.</li>
+        <li>Set every single value in all of the 3D arrays of grid velocities, <i>u</i><sub>grid</sub>, <i>v</i><sub>grid</sub>, and <i>w</i><sub>grid</sub>, to zero.</li>
+        <li>As part of the staggered grid, just as we do with the 3D arrays <i>u</i><sub>grid</sub>, <i>v</i><sub>grid</sub>, and <i>w</i><sub>grid</sub>, store three additional 3D arrays, <i>f<sub>u</sub></i>, <i>f<sub>v</sub></i>, and <i>f<sub>w</sub></i>. Set all values in these arrays to zero as well.</li>
+        <li>Part 1: Splat horizontal velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i>, <i>y</i> - &Delta;<i>x</i> / 2, <i>z</i> - &Delta;<i>x</i> / 2).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>u<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>u</i><sub>grid</sub>, <b><i>f<sub>u</sub></i></b>): This splats the particle's horizontal velocity, <i>u<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>u</i><sub>grid</sub>, of horizontal velocity components on the grid. Also, this function will accumulate the barycentric weight products (overlap volumes) of all particle contributions to each horizontal grid velocity.</li>
+          <li>For each (<i>i</i>, <i>j</i>, <i>k</i>), divide <i>u</i>(<i>i</i>, <i>j</i>, <i>k</i>) by <i>f<sub>u</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>), <b>except when <i>i</i> is 0, 1, <i>n<sub>x</sub></i> - 1, or <i>n<sub>x</sub></i>, as long as <i>f<sub>u</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>) is not close to zero.</b></li>
+          </ul>
+        </li>
+        <li>Part 2: Splat vertical velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i> - &Delta;<i>x</i> / 2, <i>y</i>, <i>z</i> - &Delta;<i>x</i> / 2).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>v<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>v</i><sub>grid</sub>, <b><i>f<sub>v</sub></i></b>): This splats the particle's vertical velocity, <i>v<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>v</i><sub>grid</sub>, of vertical velocity components on the grid. Also, this function will accumulate the barycentric weight products (overlap volumes) of all particle contributions to each vertical grid velocity.</li>
+          <li>For each (<i>i</i>, <i>j</i>, <i>k</i>), divide <i>v</i>(<i>i</i>, <i>j</i>, <i>k</i>) by <i>f<sub>v</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>), <b>except when <i>j</i> is 0, 1, <i>n<sub>y</sub></i> - 1, or <i>n<sub>y</sub></i>, as long as <i>f<sub>v</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>) is not close to zero.</b></li>
+          </ul>
+        </li>
+        <li>Part 3: Splat depth (<i>z</i> direction) velocity of particle onto grid:
+          <ul>
+            <li>Let <i>p</i><sub>shifted</sub> = (<i>x</i> - &Delta;<i>x</i> / 2, <i>y</i> - &Delta;<i>x</i> / 2, <i>z</i>).</li>
+            <li>Let (<i>i</i>, <i>j</i>, <i>k</i>) be the indices of the grid cell containing <i>p</i><sub>shifted</sub>.</li>
+            <li>Let (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>) be the barycentric weights of <i>p</i><sub>shifted</sub> in grid cell (<i>i</i>, <i>j</i>, <i>k</i>).</li>
+            <li>splat(<i>w<sub>p</sub></i>, <i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>i</i>, <i>j</i>, <i>k</i>, <i>w</i><sub>grid</sub>, <b><i>f<sub>w</sub></i></b>): This splats the particle's depth velocity, <i>w<sub>p</sub></i>, whose shifted position lies in cell (<i>i</i>, <i>j</i>, <i>k</i>) with barycentric weights (<i>w</i><sub>0</sub>, <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>), onto the relevant velocities in the 3D array, <i>w</i><sub>grid</sub>, of depth velocity components on the grid. Also, this function will accumulate the barycentric weight products (overlap volumes) of all particle contributions to each depth grid velocity.</li>
+            <li>For each (<i>i</i>, <i>j</i>, <i>k</i>), divide <i>w</i>(<i>i</i>, <i>j</i>, <i>k</i>) by <i>f<sub>w</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>), <b>except when <i>k</i> is 0, 1, <i>n<sub>z</sub></i> - 1, or <i>n<sub>z</sub></i>, as long as <i>f<sub>w</sub></i>(<i>i</i>, <i>j</i>, <i>k</i>) is not close to zero.</b></li>
+          </ul>
+      </ul></p>
+      <p>Finally, we've finished it! We've completed our description of the algorithm for splatting 3D particle velocities onto the staggered grid! Now, let's proceed to writing the C++ code for the complete particle-to-grid update!</p>
+      <h2 id="Implementing_3D_Splatting_of_Particle_Velocities">Implementing 3D Splatting of Particle Velocities</h2>
+      <p>We already implemented and tested our <code>floor</code> and <code>weights</code> functions. Now, we need to use these functions, together with our <code>StaggeredGrid</code> class, to implement the zeroing out of the velocity and velocity-weight arrays, cell label updating, splatting particle velocities onto the grid, normalizing those summed weighted velocities, and applying the boundary conditions on the velocity arrays. The code that ships with Bargteil and Shinar's course already shows how to implement this, but let's build it up in steps and ensure we do some error checking since it is very easy to introduce bugs, such as off-by-one errors, into computations like this.</p>
+      <p>Well, hold on a second. If we're going to transfer velocities from particles to the grid... from where on Earth do we get the particles? We never had any particles in our StaggeredGrid code! Oh, maybe we need to <i>initialize</i> our code with some initial number of particles with some initial positions and velocities. Oh! And we also need to decide how big to make our grid, what its grid cell width should be, how long our simulation should run, and more. Let's follow the general approach taken in <code>fluid.cpp</code> from Bargteil and Shinar's course. However, we'll modify their exact approach to separate the responsibilities of different data structures more strictly to reduce the risk of side-effect bugs and make it easier to test parts of our code.</p>
+      <p>This step of defining one-time starting parameters, or settings, for our code, is called <i>configuration</i>. These parameters, like the size of our grid, are fixed once the program starts running. We can ensure our code is never allowed to change these parameters once it starts by declaring the appropriate variables <code>const</code> and setting them upon construction of whatever data structure stores them.</p>
+      <p>Let's list the parameters we need to set, based on Bargteil and Shinar's course's code:
+      <ul>
+        <li>&Delta;<i>t</i>: the time step size for the simulation</li>
+        <li>Duration: the number of seconds for which our simulation shall run</li>
+        <li><i>&rho;</i>: the density of our fluid, which will come into play later</li>
+        <li>(<i>n<sub>x</sub></i>, <i>n<sub>y</sub></i>, <i>n<sub>z</sub></i>): the dimensions (number of grid cells in each coordinate direction) of our staggered grid</li>
+        <li>&Delta;<i>x</i>: the width (side length) of a single grid cell (we assume all cells are cubes)</li>
+        <li><i>l<sub>c</sub></i>: the 3D position of the lower corner of the staggered grid</li>
+        <li>FLIP ratio: will come into play later</li>
+        <li>Naming pattern for files we will output containing particle positions at each time step of the simulation</li>
+      </ul></p>
+      <p>The last parameter is included so that instead of just running and animating the simulation at the same time, we can instead first run the simulation and determine where all particles should be at each time step, and then separately animate the simulation. This allows us to view the simulation results without the lag resulting from trying to run the simulation in between animation frames. We'll implement that part of the code later, though. There are also a couple other parameters above that haven't come into play yet; we'll just include them for now so they'll be available when we need them, but we won't actually use them just yet.</p>
+      <p>We'll need to store these configuration parameters, or settings, for our simulation somewhere in our code. Bargteil and Shinar's course's code uses a <code>struct</code> for this, but it's safer to use a <code>class</code> with <code>private</code> instance variables instead, so they cannot be accidentally altered by the rest of our code.</p>
+      <p>Here is some isolated code just for reading and storing these simulation configuration parameters and reading initial particle positions and velocities, along with a test program to help with debugging. Let's create and move into a new directory, <code>incremental1</code>. In that directory, place the header file, <a target="_blank" href=""><code>SimulationParameters.h</code></a>. Notice <code>SimulationParameters</code> can only have its instance variables assigned at construction since they are all declared <code>const</code>: this ensures those variables will never accidentally be changed during our simulation. The implementation file is <a target="_blank" href=""><code>SimulationParameters.cpp</code></a>, which should also be in the new <code>incremental1</code> directory.</p>
+      <p>We could test just this part now, but I went ahead and also created the particle reading code. For the <code>Particle</code> data structure, I followed the structure of the code that ships with Bargteil and Shinar's course, just making a <code>struct</code> that could accidentally be changed, but I stick with this structure since it is actually quite convenient for our simulation code where we'll be changing these values frequently. The header file is <a target="_blank" href=""><code>Particle.h</code></a> and the implementation file is <a target="_blank" href=""><code>Particle.cpp</code></a>. Here is a test program, <a target="_blank" href=""><code>FluidSimulator.cpp</code></a>, which will eventually become our fluid simulation driver program, but for now is just a quick test program for reading inputs. All of these files should also be in the <code>incremental1</code> directory.</p>
+      <p>In addition, within the <code>incremental1</code> directory, we need the files <code>json/json.h</code> and <code>json/json-forwards.h</code>, which are open-source JSON reading code that ships with Bargteil and Shinar's course. I recommend getting those files directly from their course since the newer versions of the JSON reader online are far more complex now and probably overkill for our needs here. Also, within the <code>incremental1</code> directory, create an <code>inputs</code> directory, and in there you should add two files. First, <a target="_blank" href=""><code>inputs/fluid.json</code></a>, which is virtually identical to the input file that ships with Bargteil and Shinar's course. Second, create a small test file of initial positions and velocities for the particles called <a target="_blank" href=""><code>inputs/test_particles.in</code></a>.</p>
+      <p>Compile this code with this command:</p>
+      <div class="outer"><div class="inner"><pre>g++ *.cpp -o FluidSimulator -I/usr/include/eigen3/</pre></div></div>
+      <p>And run it using this command:</p>
+      <div class="outer"><div class="inner"><pre>./FluidSimulator inputs/fluid.json</pre></div></div>
+      <p>Here is the output I got:</p>
+      <div class="outer"><div class="inner"><pre>
+
+dt = 0.00111111 seconds
+duration = 5 seconds
+density = 1000
+Grid has 25 x 50 x 25 grid cells.
+lower corner is -0.125  -0.25 -0.125
+dx = 0.01
+flip ratio = 1
+output file name pattern = fluid.%03d.part
+Read 8 particles.
+
+8 particles:
+pos = -0.095  -0.03 -0.005, vel = 0 0 0
+pos =      -0.095       -0.03 1.56125e-17, vel = 0 0 0
+pos = -0.095  -0.03  0.005, vel = 0 0 0
+pos = -0.095 -0.025 -0.015, vel = 0 0 0
+pos = -0.095 -0.025  -0.01, vel = 0 0 0
+pos = -0.095 -0.025 -0.005, vel = 0 0 0
+pos =      -0.095      -0.025 1.56125e-17, vel = 0 0 0
+pos = -0.095 -0.025  0.005, vel = 0 0 0
+
+          </pre></div></div>
+          <p>This seems to match wth the input files above, so we think our code is working so far! Now, we can use the <code>SimulationParameters</code> object to initialize our <code>StaggeredGrid</code> object. We can also make the <code>StaggeredGrid</code> store a <code>const</code> copy of the lower corner position and grid cell width parameters, which will allow us to put functions like <code>floor</code> into the <code>StaggeredGrid</code> class, which can handle the subtraction of the lower corner position from a point's position all by itself, to simplify the computation of the indices of the grid cell that contains a particular point, for example. Plus, we need to add a data type for the grid cell labels (SOLID, FLUID, EMPTY), the 3D array of cell labels, and the 3D arrays of accumulated velocity-weights (<i>f<sub>u</sub></i>, <i>f<sub>v</sub></i>, and <i>f<sub>w</sub></i>).</p>
+          <p>Let's create a new directory, <code>incremental2</code>. Copy into <code>incremental2</code> the following files from <code>incremental1</code>: <code>Particle.cpp</code>, <code>Particle.h</code>, <code>SimulationParameters.cpp</code>, <code>SimulationParameters.h</code>, the entire <code>inputs</code> directory, the entire <code>json</code> directory, and <code>jsoncpp.cpp</code>. From <code>incremental0</code>, copy into <code>incremental2</code> the files <code>Array3D.h</code> and <code>Array3DTest.cpp</code>. Also copy over the <code>StaggeredGrid*</code> files.
+          <p>Note that we will now modify a few of these files. In our new <a target="_blank" href=""><code>Array3D.h</code></a>, we add a new <code>operator=</code> method that we'll use to assign every value of a 3D array to a fixed value--zero, in particular. We also add testing for this new method into <a target="_blank" href=""><code>Array3DTest.cpp</code></a>. Compile it with <code>g++ Array3DTest.cpp</code> to make sure the code is working correctly. Here is our modified <code>StaggeredGrid</code> class with the two additional parameters: the header file, <a target="_blank" href=""><code>StaggeredGrid.h</code></a> and the implementation file, <a target="_blank" href=""><code>StaggeredGrid.cpp</code></a>. We also modify our test code for this class in <a target="_blank" href=""><code>StaggeredGridTest.cpp</code></a>. All of this should go into the <code>incremental2</code> directory. I recommend running <code>clang-format</code> on all files if you haven't been doing so already. To run this last test, which exercises the entire <code>StaggeredGrid</code> class' public interface we've built so far including the particle-to-grid transfer, compile the code with:</p>
+          <div class="outer">
+            <div class="inner">
+              <pre>g++ jsoncpp.cpp Particle.cpp SimulationParameters.cpp StaggeredGrid.cpp StaggeredGridTest.cpp -I/usr/include/eigen3/</pre>
+            </div>
+          </div>
+          <p>Then run it with:</p>
+          <div class="outer">
+            <div class="inner">
+              <pre>./a.out inputs/fluid.json</pre>
+            </div>
+          </div>
+          <p>You should see a message printed out saying that all assertion tests passed, if everything worked correctly! Don't forget to clean up with <code>rm a.out</code>. We are really at the point where creating a makefile to automatically list the correct files to compile for each test program, and to clean up afterward, would be very convenient.</p>
+          <p>Now, we are ready to finally implement our particle-to-grid transfer algorithm that we developed in so much detail earlier!</p>
+
     </div>
   </body>
 </html>
