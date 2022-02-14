@@ -11,6 +11,13 @@ h2 {
   color: black;
 }
 
+.author {
+  font-family: "Arial Narrow", Arial, sans-serif;
+  font-weight: normal;
+  color: black;
+  font-size: 20px;
+}
+
 .center {
   display: block;
   margin-left: auto;
