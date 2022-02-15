@@ -50,6 +50,7 @@
         <li><a href="#Handling_Boundary_and_Cell_Labels">Handling the Boundary and Cell Labels</a></li>
         <li><a href="#Implementing_3D_Splatting_of_Particle_Velocities">Implementing 3D Splatting of Particle Velocities</a></li>
       </ul>
+      <a href="#Advecting_Particle_Velocities">Advecting Particle Velocities</a><br>
       <br>
       <br>
       <br>
@@ -1007,7 +1008,9 @@ pos = -0.095 -0.025  0.005, vel = 0 0 0
             </div>
           </div>
           <p>You should see a message printed out saying that all assertion tests passed, if everything worked correctly! Don't forget to clean up with <code>rm a.out</code>. We are really at the point where creating a makefile to automatically list the correct files to compile for each test program, and to clean up afterward, would be very convenient, but we'll hold off on this until or unless it gets a bit more unwieldy.</p>
-          <p>We have now completed the particle-to-grid velocity transfer code in C++ and tested it to give us confidence it's implemented correctly! You can compare our code to the particle-to-grid portion of the fluid code in <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">Bargteil and Shinar's SIGGRAPH course</a>. What remains for us to implement here is the advection (updating position) of particles based on velocity and pressure projection, where we calcualte pressure values for the fluid that keep it divergence-free. To understand the theoretical underpinnings of these concepts along with how they lead to the algorithms and implementation strategies we're exploring, I highly recommend reading <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">Robert Bridson's excellent book on fluid simulation</a> as well as <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's course notes</a>.</p>
+          <p>We have now completed the particle-to-grid velocity transfer code in C++ and tested it to give us confidence it's implemented correctly! You can compare our code to the particle-to-grid portion of the fluid code in <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">Bargteil and Shinar's SIGGRAPH course</a>. What remains for us to implement here is the advection (updating position) of particles based on velocity and pressure projection, where we calculate pressure values for the fluid that keep it divergence-free. To understand the theoretical underpinnings of these concepts along with how they lead to the algorithms and implementation strategies we're exploring, I highly recommend reading <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">Robert Bridson's excellent book on fluid simulation</a> as well as <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's course notes</a>.</p>
+          <h1 id="Advecting_Particle_Velocities">Advecting Particle Velocities</h1>
+
     </div>
   </body>
 </html>
