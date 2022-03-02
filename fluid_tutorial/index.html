@@ -58,6 +58,9 @@
         <li><a href="#Implementing_3D_Advection">Implementing 3D Advection</a></li>
       </ul>
       <a href="#Applying_Body_Forces">Applying Body Forces</a><br>
+      <a href="#Pressure_Projection">Pressure Projection</a><br>
+      <a href="#Visualizing_Fluid_Animation">Visualizing the Fluid Animation</a><br>
+      <a href="#The_End_Result">The End Result</a><br>
       <br>
       <br>
       <br>
@@ -65,10 +68,13 @@
       <br>
     </div>
     <div class="thetext">
-      <p><img src="TitleImage.jpg" class="centeropengl" style="border-style: none;"></img></p>
+      <p><img src="BasicFluidAnimation.gif" class="centeropengl"></img></p>
+      <p style="font-size: 10px;">Video made using the FLIP solver and visualizer in the <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">SIGGRAPH physics-based animation course</a> on which this tutorial is based.</p>
       <h1 id="home">Physics-Based Simulation &amp; Animation of Fluids</h1>
       <p class="author">By Chand T. John, Ph.D.</p>
       <p>Do you ever wonder how special effects using fluids like water are animated for movies? In this tutorial, we'll show you how to simulate fluids using the popular Fluid-Implicit-Particle / Particle-in-Cell (FLIP/PIC) method.</p>
+      <p>The guiding mathematical model of our simulation will be the <a target="_blank" href="https://en.wikipedia.org/wiki/Navier%E2%80%93Stokes_equations">Navier-Stokes equations</a>:</p>
+      <p><img src="TitleImage.jpg" class="centeropengl" style="border-style: none;"></img></p>
       <h1 id="Acknowledgments">Acknowledgments</h1>
       <p>This tutorial expands on the fluid simulation portion of the excellent <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">SIGGRAPH course on physics-based animation</a> created by Dr. Adam Bargteil and Dr. Tamar Shinar. This tutorial also references the excellent <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">educational materials on fluid simulation</a> put together by Dr. Robert Bridson and Dr. Matthias M&uuml;ller-Fischer as well as Dr. Bridson's <a target="_blank" href="https://www.amazon.com/Simulation-Computer-Graphics-Robert-Bridson/dp/1482232839">book on fluid simulation</a>. These resources are tremendously useful for making physics-based simulation and animation accessible to a wide audience and I merely hope to add some details and illustrations on top of these awesome contributions by others. We will cite all of these materials frequently throughout this tutorial! I highly recommend going through these materials if you are at all curious about physics-based simulation for computer graphics.</p>
       <h1 id="Background">Background</h1>
@@ -1103,6 +1109,13 @@ pos = -0.095 -0.025  0.005, vel = 0 0 0
           <h1 id="Applying_Body_Forces">Applying Body Forces</h1>
           <p>The forces resulting from internal pressure and viscosity of a fluid are two of the terms in the Navier-Stokes momentum equation governing our fluid flow model. Another term is the body forces term, which is often just a gravity term. In our fluid simulation, we'll simply apply a gravitational acceleration throughout our fluid by subtracting &Delta;<i>t</i> &middot; 9.80665 m/s<sup>2</sup> from all vertical velocities in our staggered grid. Accordingly, we make a copy of our directory, <code>incremental3</code>, called <code>incremental4</code>, in which we update <a target="_blank" href="https://github.com/unusualinsights/flip_pic_examples/blob/main/incremental4/StaggeredGrid.h">StaggeredGrid.h</a>, <a target="_blank" href="https://github.com/unusualinsights/flip_pic_examples/blob/main/incremental4/StaggeredGrid.cpp">StaggeredGrid.cpp</a>, and <a target="_blank" href="https://github.com/unusualinsights/flip_pic_examples/blob/main/incremental4/StaggeredGridTest.cpp">StaggeredGridTest.cpp</a> to include and test a new function, <code>ApplyGravity</code>, which applies exactly this subtraction to the grid's vertical velocities.</p>
           <p>Note that our changes to the grid velocities will likely not meet our boundary conditions we described earlier during splatting. So, we call the same function to fix the boundary velocities that we did during splatting, after applying gravitational acceleration to our vertical velocities!</p>
+          <h1 id="Pressure_Projection">Pressure Projection</h1>
+          <p>COMING SOON</p>
+          <h1 id="Visualizing_Fluid_Animation">Visualizing the Fluid Animation</h1>
+          <p>COMING SOON</p>
+          <h1 id="The_End_Result">The End Result</h1>
+          <p><img src="BasicFluidAnimation.gif" class="centeropengl"></img></p>
+      <p style="font-size: 10px;">Video made using the FLIP solver and visualizer in the <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/">SIGGRAPH physics-based animation course</a> on which this tutorial is based.</p>
     </div>
   </body>
 </html>
