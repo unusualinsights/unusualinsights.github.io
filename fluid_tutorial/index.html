@@ -9,32 +9,32 @@
   </head>
   <body>
     <div class="sidenav">
-      <a href="#home">Top</a><br>
-      <a href="#Acknowledgments">Acknowledgments</a><br>
-      <a href="#Background">Background</a><br>
-      <a href="#What_to_Install">What to Install</a><br>
-      <a href="#Why_Physics">Why Physics?</a><br>
+      <a href="#home">Top</a><br><br>
+      <a href="#Acknowledgments">Acknowledgments</a><br><br>
+      <a href="#Background">Background</a><br><br>
+      <a href="#What_to_Install">What to Install</a><br><br>
+      <a href="#Why_Physics">Why Physics?</a><br><br>
       <a href="#Viewing_Geometry_Using_OpenGL">Viewing Geometry Using OpenGL</a><br>
       <ul>
         <li><a href="#Hello_Sphere">Hello, Sphere!</a></li>
         <li><a href="#Hello_Shaded_Sphere">Hello, Shaded Sphere!</a></li>
         <li><a href="#Positioning_the_Sphere">Positioning the Sphere</a></li>
         <li><a href="#How_OpenGL_Maps_from_3D_to_2D">How OpenGL Maps from 3D to 2D</a></li>
-      </ul>
+      </ul><br>
       <a href="#A_Massless_Sizeless_Particle">A Massless, Sizeless Particle</a><br>
       <ul>
         <li><a href="#Mathematical_Model_of_a_Massless_Sizeless_Particle">Mathematical Model of a Massless, Sizeless Particle</a></li>
         <li><a href="#Simulating_a_Massless_Sizeless_Particle">Simulating a Massless, Sizeless Particle</a></li>
         <li><a href="#Model_of_Massless_Sizeless_Particle_In_Velocity_Field">Mathematical Model of a Massless, Sizeless Particle in a Velocity Field</a></li>
         <li><a href="#Simulating_Massless_Sizeless_Particle_in_Velocity_Field">Simulating a Massless, Sizeless Particle in a Velocity Field</a></li>
-      </ul>
+      </ul><br>
       <a href="#A_Particle_with_Mass">A Particle with Mass</a><br>
       <ul>
         <li><a href="#Mathematical_Model_of_Particle_with_Mass">Mathematical Model of a Particle with Mass</a></li>
         <li><a href="#Simulating_Particle_with_Mass">Simulating a Particle with Mass</a></li>
         <li><a href="#Mathematical_Model_of_Particles_with_Mass_Size_and_Multiple_Forces">Mathematical Model of Particles with Mass, Size, and Multiple Forces</a></li>
         <li><a href="#Simulating_Colliding_Particles_with_Mass_and_Size">Simulating Colliding Particles with Mass and Size</a></li>
-      </ul>
+      </ul><br>
       <a href="#Fluid_Mechanics">Fluid Mechanics</a><br>
       <ul>
         <li><a href="#Fluid_Particles">Fluid Particles</a></li>
@@ -47,14 +47,14 @@
         <li><a href="#Final_Form_of_Navier_Stokes_Momentum_Equation">Final Form of the Navier-Stokes Momentum Equation</a></li>
         <li><a href="#Mass_Conservation_and_Incompressibility">Mass Conservation &amp; Incompressibility</a></li>
         <li><a href="#Splitting">Splitting</a></li>
-      </ul>
+      </ul><br>
       <a href="#The_Staggered_Grid">The Staggered Grid</a><br>
       <ul>
         <li><a href="#Staggered_Grid_Structure">Staggered Grid Structure</a></li>
         <li><a href="#Storing_Staggered_Grid_Data">Storing Staggered Grid Data</a></li>
         <li><a href="#Staggered_Grid_Data_Structure">The Staggered Grid Data Structure</a></li>
         <li><a href="#Grids_vs_Particles_for_Fluid_Simulation">Grids vs. Particles for Fluid Simulation</a></li>
-      </ul>
+      </ul><br>
       <a href="#Mapping_from_Particles_to_Grid">Mapping from Particles to the Grid</a><br>
       <ul>
         <li><a href="#Barycentric_Weights_of_a_Particle">Barycentric Weights of a Particle</a></li>
@@ -63,17 +63,23 @@
         <li><a href=="#Normalizing_Splatted_Velocities">Normalizing Splatted Velocities</a></li>
         <li><a href="#Handling_Boundary_and_Cell_Labels">Handling the Boundary and Cell Labels</a></li>
         <li><a href="#Implementing_3D_Splatting_of_Particle_Velocities">Implementing 3D Splatting of Particle Velocities</a></li>
-      </ul>
+      </ul><br>
       <a href="#Advecting_Particle_Velocities">Advecting Particle Velocities</a><br>
       <ul>
         <li><a href="#Advection_in_1D">Advection in 1D</a></li>
         <li><a href="#Advection_in_2D">Advection in 2D</a></li>
         <li><a href="#Advection_in_3D">Advection in 3D</a></li>
         <li><a href="#Implementing_3D_Advection">Implementing 3D Advection</a></li>
-      </ul>
-      <a href="#Applying_Body_Forces">Applying Body Forces</a><br>
+      </ul><br>
+      <a href="#Applying_Body_Forces">Applying Body Forces</a><br><br>
       <a href="#Pressure_Projection">Pressure Projection</a><br>
-      <a href="#Visualizing_Fluid_Animation">Visualizing the Fluid Animation</a><br>
+      <ul>
+        <li><a href="#Velocity_Update_via_Discrete_Pressure_Gradient">Velocity Update via the Discrete Pressure Gradient</a></li>
+        <li><a href="#Discrete_Divergence_of_Velocity_Field">Discrete Divergence of the Velocity Field</a></li>
+        <li><a href="#Conjugate_Gradient_Algorithm">Conjugate Gradient Algorithm</a></li>
+        <li><a href="#Implementing_Pressure_Projection">Implementing Pressure Projection</a></li>
+      </ul><br>
+      <a href="#Visualizing_Fluid_Animation">Visualizing the Fluid Animation</a><br><br>
       <a href="#The_End_Result">The End Result</a><br>
       <br>
       <br>
@@ -368,11 +374,11 @@
       <p>All the simulations we implemented above used Newtonian mechanics, which describes the motion of theoretical particles that follow Newton's laws of motion. Newtonian mechanics also models the dynamics of real objects that approximately behave like particles, such as planets orbiting around the Sun. But how would we apply Newtonian mechanics to fluids, which don't really look like particles at all?</p>
       <p>It turns out, fluid mechanics is not that different from Newtonian mechanics! It's just that we have to adapt Newtonian mechanics to form a mathematical model of a fluid's properties. The key idea in Newtonian mechanics is <i>F</i> = <i>ma</i>: that is, the sum of all forces acting on a particle equals the amount of matter in the particle times the particle's acceleration. The <i>exact</i> same idea will apply to fluids!</p>
       <h2 id="Fluid_Particles">Fluid Particles</h2>
-      <p>In fluid mechanics, we model fluid mathematically as a collection of "fluid particles," also known as fluid "parcels" or "volume elements." The term "parcel" makes sense when you see diagrams of fluid particles being drawn as boxes (rectangular prisms or cubes) rather than the spheres you often see for Newtonian particles. Like Newtonian particles, fluid particles are also considered to be infinitely small in theory, occupying just as much space (i.e., none) as a zero-dimensional point in <b>R</b><sup>3</sup>. However, we also assume that a fluid particle is large enough to contain enough molecules of fluid that they have properties that would normally only make sense for a finite-sized box of fluid, such as density and pressure. This might seem strange: how can a fluid particle be infinitely small, yet contain a ton of molecules of fluid? It turns out this is just a theoretical idea, but it's been shown to be an accurate enough approximation of actual fluid motion despite its strangeness. This is strangeness is called the <a href="https://en.wikipedia.org/wiki/Fluid_mechanics#Continuum_assumption">continuum assumption</a>, i.e., that even though we know a fluid is made up of discrete molecules, we assume a fluid is actually "continuous" in that functions of space and time like density and pressure are continuous and even differentiable, which would never be possible for any matter made up of purely discrete objects.</p>
+      <p>In fluid mechanics, we model fluid mathematically as a collection of "fluid particles," also known as fluid "parcels" or "volume elements." The term "parcel" makes sense when you see diagrams of fluid particles being drawn as boxes (rectangular prisms or cubes) rather than the spheres you often see for Newtonian particles. Like Newtonian particles, fluid particles are also considered to be infinitely small in theory, occupying just as much space (i.e., none) as a zero-dimensional point in <b>R</b><sup>3</sup>. However, we also assume that a fluid particle is large enough to contain enough molecules of fluid that they have properties that would normally only make sense for a finite-sized box of fluid, such as density and pressure. This might seem strange: how can a fluid particle be infinitely small, yet contain a ton of molecules of fluid? It turns out this is just a theoretical idea, but it's been shown to be an accurate enough approximation of actual fluid motion despite its strangeness. This is strangeness is called the <a target="_blank" href="https://en.wikipedia.org/wiki/Fluid_mechanics#Continuum_assumption">continuum assumption</a>, i.e., that even though we know a fluid is made up of discrete molecules, we assume a fluid is actually "continuous" in that functions of space and time like density and pressure are continuous and even differentiable, which would never be possible for any matter made up of purely discrete objects.</p>
       <h2 id="Newtons_Momentum_Equation">Newton's Momentum Equation</h2>
       <p>Fluid mechanics is really just about applying Newton's second law and the law of conservation of mass to fluid particles. Now, in theory we could try to simulate a fluid as just a bunch of Newtonian particles colliding against each other as they float through space. But, this makes it hard and inefficient to really model a fluid's behavior: after all, our computers cannot take the colliding particles simulation we did above and simply extend it to an infinite number of particles; computers only have finite memory and computing resources. Instead, we add some richness to the types of forces acting on fluid particles to upgrade them from just being Newtonian particles that only feel gravitational and collision forces. As we'll soon describe, fluid particles will still feel gravity, like Newtonian particles. Fluid particles will also feel forces due to something called <i>pressure</i> and something else called <i>viscosity</i>.</p>
       <p>A fluid particle will still be subject to Newton's second law: <b>F</b> = <i>m</i><b>a</b>. The sum of forces acting on the particle will equal its mass times its acceleration. The forces acting on fluid particles, fall into two categories: external body forces, like those Newtonian particles feel, and internal forces, which are unique to fluid particles. Also, since momentum is <b>p</b> = <i>m</i><b>v</b>, the time-derivative of momentum is <b>F</b> = <i>d</i><b>p</b>/<i>dt</i> = <i>d</i>/<i>dt</i>[<i>m</i><b>v</b>] = <i>m</i> &middot; <i>d</i><b>v</b>/<i>dt</i> = <i>m</i><b>a</b>. In other words, Newton's second law is just the time-derivative of the definition of momentum, and thus, we can think of Newton's second law as "Newton's momentum equation." You'll see soon why I mentioned this!</p>
-      <p>As described in the <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">SIGGRAPH course notes</a> put together by Dr. Robert Bridson and Dr. Matthias M&uuml;ller-Fischer as well as Dr. Bridson's <a target="_blank" href="https://www.amazon.com/Simulation-Computer-Graphics-Robert-Bridson/dp/1482232839">book on fluid simulation</a>, fluid flow is modeled mathematically by two equations: the <a href="https://en.wikipedia.org/wiki/Navier%E2%80%93Stokes_equations">Navier-Stokes momentum equation</a> (which is just Newton's momentum equation or Newton's second law, applied to fluid particles) and the incompressibility condition (which results from the law of conservation of mass, as we'll soon see). Let's build up those equations in steps so we can really understand them.</p>
+      <p>As described in the <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/">SIGGRAPH course notes</a> put together by Dr. Robert Bridson and Dr. Matthias M&uuml;ller-Fischer as well as Dr. Bridson's <a target="_blank" href="https://www.amazon.com/Simulation-Computer-Graphics-Robert-Bridson/dp/1482232839">book on fluid simulation</a>, fluid flow is modeled mathematically by two equations: the <a target="_blank" href="https://en.wikipedia.org/wiki/Navier%E2%80%93Stokes_equations">Navier-Stokes momentum equation</a> (which is just Newton's momentum equation or Newton's second law, applied to fluid particles) and the incompressibility condition (which results from the law of conservation of mass, as we'll soon see). Let's build up those equations in steps so we can really understand them.</p>
       <h2 id="Gravitational_Force">Gravitational Force</h2>
       <p>The forces acting on a fluid particle are split into two categories: external and internal. The external forces are often just gravity, but can also include things like the forces resulting from you holding a container of milk and shaking it. For our simulations in this tutorial, the only external force acting on a fluid particle will be gravitational force, which is just the particle's weight: <i>m</i><b>g</b>, where <i>m</i> is the particle's mass and <b>g</b> is acceleration due to gravity.</p>
       <h2 id="Pressure_Gradient_Force">Pressure Gradient Force</h2>
@@ -402,9 +408,9 @@
       <p><img src="EulerEquation.png" style="border-style: none; max-width: 350px;" class="center"></img></p>
       <p>In this tutorial, we'll stick with this inviscid approximation of the Navier-Stokes momentum equation.</p>
       <h2 id="Mass_Conservation_and_Incompressibility">Mass Conservation &amp; Incompressibility</h2>
-      <p>The derivative of the fluid pressure function for a given parcel of fluid (a box-shaped particle) can be approximated to up to its first-order term in its Taylor series as <a target="_blank" href="http://www2.eng.cam.ac.uk/~mpj1001/MJ_learnfluidsmechanics.html">Dr. Matthew Juniper's fluid dynamics notes</a> explain, along with an assumption that fluid mass is conserved within any arbitrary volume of fluid (an application of the law of conservation of mass we stated earlier as a fundamental assumption of physics), to derive an equation called the <i>equation of mass continuity</i>. Alternatively, <a href="https://en.wikipedia.org/wiki/Fluid_dynamics#Conservation_laws">using the Divergence Theorem</a>, the same equation can be derived:
+      <p>The derivative of the fluid pressure function for a given parcel of fluid (a box-shaped particle) can be approximated to up to its first-order term in its Taylor series as <a target="_blank" href="http://www2.eng.cam.ac.uk/~mpj1001/MJ_learnfluidsmechanics.html">Dr. Matthew Juniper's fluid dynamics notes</a> explain, along with an assumption that fluid mass is conserved within any arbitrary volume of fluid (an application of the law of conservation of mass we stated earlier as a fundamental assumption of physics), to derive an equation called the <i>equation of mass continuity</i>. Alternatively, <a target="_blank" href="https://en.wikipedia.org/wiki/Fluid_dynamics#Conservation_laws">using the Divergence Theorem</a>, the same equation can be derived:
       <p><img src="MassContinuityEquation.png" style="border-style: none;" class="center"></img></p>
-      <p>Following the <a href="https://en.wikipedia.org/wiki/Incompressible_flow#Derivation">derivation here</a>, assuming the fluid density function is constant within the infinitesimal volume of a fluid parcel that flows with the fluid, i.e., <i>D&rho;</i>/<i>Dt</i> = 0, we obtain the <i>incompressibility condition</i>:
+      <p>Following the <a target="_blank" href="https://en.wikipedia.org/wiki/Incompressible_flow#Derivation">derivation here</a>, assuming the fluid density function is constant within the infinitesimal volume of a fluid parcel that flows with the fluid, i.e., <i>D&rho;</i>/<i>Dt</i> = 0, we obtain the <i>incompressibility condition</i>:
       <p><img src="Incompressibility.png" style="border-style: none;" class="center"></img></p>
       <p>The Navier-Stokes momentum equation taken together with the incompressibility condition (which itself is just the law of mass conservation with constant material density) are often simply called the <i>Navier-Stokes equations</i>. In our case, since we're neglecting viscosity, the Euler momentum equation (the inviscid Navier-Stokes momentum equation) together with the incompressibility condition are called the <i>Euler equations</i>.</p>
       <h2 id="Splitting">Splitting</h2>
@@ -1196,7 +1202,80 @@ pos = -0.095 -0.025  0.005, vel = 0 0 0
           <p>Compile and run this code just like you did for the code in the <code>incremental2</code> and <code>incremental3</code> folders earlier. Clean it up by deleting <code>a.out</code> when you're done running it.</p>
           <p>Note that our changes to the grid velocities will likely not meet our boundary conditions we described earlier during splatting. So, we call the same function to fix the boundary velocities that we did during splatting, after applying gravitational acceleration to our vertical velocities!</p>
           <h1 id="Pressure_Projection">Pressure Projection</h1>
-          <p>COMING SOON</p>
+          <p>So far we have added the effects of the advection term and the body forces (gravity) term. We will now incorporate the pressure term and the incompressibility constraint. Recall that the pressure projection step is intended to compute a pressure function for our fluid that causes its velocity field to be divergence-free, or volume-conserving. Conceptually, <i>the purpose of pressure is to conserve volume</i>, and recalling that the incompressibility a.k.a. zero-divergence a.k.a. volume-conserving constraint was just a simplication of mass conservation, we can say the purpose of pressure is to conserve the mass of the fluid.</p>
+          <h2 id="Velocity_Update_via_Discrete_Pressure_Gradient">Velocity Update via the Discrete Pressure Gradient</h2>
+          <p>As explained in Chapter 4 of <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's course notes</a>, we split our Euler equations so that we started with an initial velocity field, then found a velocity field that incorporates the advection term, and then found a velocity field that incorporates the gravity term. Now, we want to solve the equation <i>&part;</i><b>u</b>/<i>&part;t</i> = -(1/<i>&rho;</i>)&nabla;<i>p</i> by discretizing it to (<b>u</b><sub>next</sub> - <b>u</b>) / &Delta;<i>t</i> = -(1/<i>&rho;</i>)(<i>p</i><sub>next</sub> - <i>p</i>) / &Delta;<i>x</i>, and find a pressure field <i>p</i> such that solving for the next time step's velocity field <b>u</b><sub>next</sub> satisfies the incompressibility constraint &nabla; &middot; <b>u</b><sub>next</sub> = 0 and the solid wall boundary conditions. The idea here is that the "current" velocity field <b>u</b> already incorporated the advection and gravity terms from the Euler momentum equation, so we pretend the only term we have left to add is the pressure gradient term subject to the incompressibility constraint. Notice in that discretized version of the remaining terms in the Euler momentum equation, <b>u</b><sub>next</sub> refers to the next velocity <i>temporally</i>, i.e., at the next time step while <i>p</i><sub>next</sub> refers to the next pressure <i>spatially</i>, e.g., in an adjacent grid cell. That is, <b>u</b> really means <b>u</b>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>) and <b>u</b><sub>next</sub> is really shorthand for <b>u</b>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i> + &Delta;<i>t</i>), <i>p</i> is <i>p</i>(<i>x</i>, <i>y</i>, <i>z</i>, <i>t</i>), and <i>p</i><sub>next</sub> is shorthand for <i>p</i>(<i>x</i> + &Delta;<i>x</i>, <i>y</i> + &Delta;<i>x</i>, <i>z</i> + &Delta;<i>x</i>, <i>t</i>). Solving for <b>u</b><sub>next</sub> in the discretized differential equation yields <b>u</b><sub>next</sub> = <b>u</b> - (&Delta;<i>t</i>/<i>&rho;</i>)(<i>p</i><sub>next</sub> - <i>p</i>) / &Delta;<i>x</i>. But in the staggered grid we break this all up by dimension. First, let's examine a cell (<i>i</i>, <i>j</i>, <i>k</i>) and its neighbors to the right, top, and front and recall that the pressure value for each grid cell represents the fluid pressure at the cell's center:</p>
+          <p><img src="PressureNeighbors.png" style="border-style: none;" class="center"></img></p>
+          <p>Then, assuming we have already found a pressure function that makes the velocity field divergence-free, the fluid velocities at the next time step in the grid, for any fluid velocity bordering a grid cell marked as containing fluid, are:</p>
+          <p><img src="PressureUpdate.png" style="border-style: none;" class="center"></img></p>
+          <h2 id="Discrete_Divergence_of_Velocity_Field">Discrete Divergence of the Velocity Field</h2>
+          <p>The velocity field's divergence is &nabla; &middot; <b>u</b> = <i>&part;</i><b>u</b>/<i>&part;x</i> + <i>&part;</i><b>u</b>/<i>&part;y</i> + <i>&part;</i><b>u</b>/<i>&part;z</i>. Discretizing the three spatial derivatives on the right-hand side of that equation, across any grid cell marked as a fluid gives us the <i>discrete divergence</i> of the velocity field for cell (<i>i</i>, <i>j</i>, <i>k</i>) shown in the figure below. This is where the staggered grid becomes very useful. Notice how the discrete divergence of the fluid velocity is just computed by subtracting stored grid velocities, dividing by the grid cell width, and adding these values together for each dimension!</p>
+          <p><img src="DiscreteDivergence.png" style="border-style: none;" class="center"></img></p>
+          <p>Since the incompressibility constraint states that the divergence of the velocity field should be zero, we can substitute the pressure-based velocity update equations in the previous section into the next time step's velocity variables (the variables labeled with "next"):</p>
+          <p><img src="PressureUpdateEqns1.png" style="border-style: none;" class="center"></img></p>
+          <p><img src="PressureUpdateEqns2.png" style="border-style: none;" class="center"></img></p>
+          <p><img src="PressureUpdateEqns3.png" style="border-style: none;" class="center"></img></p>
+          <p>This derivation is explained in <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's course notes</a> in Section 4.3. The observation that the last term above contains a discretization of the Laplacian of pressure is justified following the standard seven-point stencil central difference approximation of the Laplacian as a derivative of derivatives. The central differencing scheme for second derivatives is described for one and two dimensions in <a target="_blank" href="https://cal.cs.umbc.edu/Courses/PhysicsBasedAnimation/PhysicsBasedAnimationCourseNotes2019.pdf">Bargteil and Shinar's course notes on pages 31-32</a>. Here is how we can derive the seven-point stencil-based central difference approximation of the Laplacian of our fluid's pressure:</p>
+          <p><img src="Laplacian7PointStencil.png" style="border-style: none;" class="center"></img></p>
+          <p>Let's move velocity terms to one side of the pressure-based zero-divergence equation we derived above. That leaves us with:</p>
+          <p><img src="PressureUpdateEqns4.png" style="border-style: none;" class="center"></img></p>
+          <p>We can divide through by &Delta;<i>t</i>/(<i>&rho;</i>(&Delta;<i>x</i>)<sup>2</sup>) and distribute the negative sign through the pressure terms to get:</p>
+          <p><img src="PressureUpdateEqns5.png" style="border-style: none;" class="center"></img></p>
+          <p>Since this equation applies to all cells (<i>i</i>, <i>j</i>, <i>k</i>) labeled as fluid, this actually is a whole system of linear equations with all the pressure values being the unknown values stacked into a single vector, <b>p</b>, and all other values being known. The scaled divergences on the right-hand side can be stacked into a single vector, <b>d</b>:</p>
+          <p><img src="PressureUpdateEqns6.png" style="border-style: none;" class="center"></img></p>
+          <p>We can write this as a linear equation <i>A</i><b>p</b> = <b>d</b>, where <i>A</i> is a matrix containing six -1s and one 6 in each row corresponding to a fluid grid cell. This is a large, <i>sparse</i> matrix since other than those -1s and 6s in each row corresponding to a fluid cell, the entire matrix is full of zeros.</p>
+          <p>As described in <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's course notes</a>, in case of an empty neighboring cell, we simply set that neighbor's entry in matrix <i>A</i> to zero instead of -1. In case of neighboring cells being solid, we reduce the 6 by however many solid neighboring cells are present. So, in general, the "6" is actually just the number of non-solid grid cell neighbors of cell (<i>i</i>, <i>j</i>, <i>k</i>).</p>
+          <h2 id="Conjugate_Gradient_Algorithm">Conjugate Gradient Algorithm</h2>
+          <p>Our goal is to solve the equation above, <i>A</i><b>p</b> = <b>d</b>, for <b>p</b>. We already know <b>d</b>: those are just the scaled negated divergences from the current (old) time. The matrix <i>A</i> is also known, big, and sparse. Wouldn't it be nice if we could just invert <i>A</i> and get <b>p</b> = <i>A</i><sup>-1</sup><b>d</b> in one step, and be done? Unfortunately, <i>A</i> is not always invertible, and being large and sparse, storing the matrix and directly inverting it requires storing a lot of unnecessary information. Fortunately, <i>A</i> is also <a target="_blank" href="https://en.wikipedia.org/wiki/Definite_matrix">symmetric and positive-semi-definite</a>, so there's another easy-to-implement algorithm we can use to solve this problem: the <i>Conjugate Gradient Algorithm</i>, without even requiring us to store the actual <i>A</i> matrix anywhere in computer memory during our program's execution!</p>
+          <p>This <a target="_blank" href="https://www.cs.cmu.edu/~quake-papers/painless-conjugate-gradient.pdf">very approachable, yet detailed introduction to the Conjugate Gradient Algorithm</a> by Dr. Jonathan Shewchuk lists the steps of the algorithm on page 32, while the rest of the document explains the algorithm, variations on it, its derivation, and its properties. Here we will describe and illustrate a summary of what is described in Dr. Shewchuk's document. Page 34 of <a target="_blank" href="https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf">Bridson and M&uuml;ller-Fischer's course notes</a> also lists a similar algorithm called the Preconditioned Conjugate Gradient Algorithm, which is <i>not</i> what we're using in this tutorial (we're just doing the regular, vanilla Conjugate Gradient Algorithm), but shows the criteria for when to stop the algorithm from repeating iterations of its calculations.</p>
+          <p>The Conjugate Gradient Algorithm takes advantage of the fact that you can write a function called a <i>quadratic form</i> using <i>A</i>, <b>p</b>, and <b>d</b>, whose graph is a giant bowl if <i>A</i> is positive-definite, where <i>c</i> is some real number:</p>
+          <p><img src="CG_01_QuadFormBowl.png" style="border-style: none;" class="center"></img></p>
+          <p>(If <i>A</i> is positive semi-definite, we can still use the same algorithm.) The idea is to pick some initial guess at a solution, <b>p</b><sub>0</sub>:</p>
+          <p><img src="CG_02_InitialGuess.png" style="border-style: none;" class="center"></img></p>
+          <p>As Bridson and M&uuml;ller-Fischer describe, we can just start with a guess of all zeros, <b>p</b><sub>0</sub> = <b>0</b> since, for example, some more "intelligent" approach like using a previous time steps' pressures may not work since some grid cells may have switched to or from even being fluid. Then, figure out how far you are from the bottom of the bowl. Well, we don't know what <b>p</b> vector will actually get us to the bottom of the bowl, but we do know that whatever that correct <b>p</b> is, left-multiplying it by <i>A</i> gives us <b>d</b> since that was the equation we started with: <i>A</i><b>p</b> = <b>d</b>! So, how far we are from the correct solution to <i>A</i><b>p</b> = <b>d</b> can be measured using the <i>residual</i> vector, <b>r</b><sub>0</sub> = <b>d</b> - <i>A</i><b>p</b><sub>0</sub>, based on our initial guess, <b>p</b><sub>0</sub>:</p>
+          <p><img src="CG_03_InitialResidual.png" style="border-style: none;" class="center"></img></p>
+          <p>Well, now that we know how far we are from the correct solution, let's figure out how to get closer to the solution! We're going to take a step toward that solution. But how big a step, and in what direction? It turns out, the step direction, <b>d</b><sub>0</sub>, can just be the residual, <b>r</b><sub>0</sub>, which takes us in a direction closing the gap between our current guess, <b>p</b><sub>0</sub>, and the final solution, <b>p</b>. The step size is calculated in terms of the matrix, residual, and step direction as <i>&alpha;</i><sub>0</sub> = <b>r</b><sub>0</sub> &middot; <b>r</b><sub>0</sub> / (<b>d</b><sub>0</sub> &middot; <i>A</i><b>d</b><sub>0</sub>). That takes us to a new guess at the solution, <b>p</b><sub>1</sub> = <b>p</b><sub>0</sub> + <i>&alpha;</i><sub>0</sub><b>d</b><sub>0</sub>:</p>
+          <p><img src="CG_04_FirstStep.png" style="border-style: none;" class="center"></img></p>
+          <p>The new residual, or how "off" we are from the solution's scaled, flipped divergence values, is updated to <b>r</b><sub>1</sub> = <b>r</b><sub>0</sub> - <i>&alpha;</i><sub>0</sub><i>A</i><b>d</b><sub>0</sub>:</p>
+          <p><img src="CG_05_2ndResidual.png" style="border-style: none;" class="center"></img></p>
+          <p>We then compute how small our new residual's magnitude is relative to the previous residual, <i>&beta;</i><sub>1</sub> = (<b>r</b><sub>1</sub> &middot; <b>r</b><sub>1</sub>) / (<b>r</b><sub>0</sub> &middot; <b>r</b><sub>0</sub>). From this, we determine the next direction in which to step: <b>d</b><sub>1</sub> = <b>r</b><sub>1</sub> + <i>&beta;</i><sub>1</sub><b>d</b><sub>0</sub>:</p>
+          <p><img src="CG_06_2ndDirection.png" style="border-style: none;" class="center"></img></p>
+          <p>This process repeats with computing the next step size, <i>&alpha;</i><sub>1</sub>, the new solution guess, <b>p</b><sub>2</sub>, etc.</p>
+          <p>But when does this process end? How many steps should we end up taking? Well, as Bridson and M&uuml;ller-Fischer describe, we can arbitrarily stop when we either get close enough to the solution (we'll say if the sum of squared scaled, flipped divergences of our current solution guess is no more than 10<sup>-6</sup> times the sum of squared <i>original</i> scaled, flipped divergences) to declare that we're done, or when we're taken a certain number of steps toward the solution (we'll say a thousand), we're done. This entire process of taking up to a thousand steps to end within one time step of our simulation, so we don't want it taking forever!</p>
+          <p>Thus, we end up with the algorithm described in Shewchuk's document, which is also how the algorithm is implemented in Bargteil and Shinar's code (note all equals signs are assignment statements, not statements of truth!):
+          <ul>
+            <li>Start with <b>p</b> = <b>0</b>.
+            <li>Start with <b>r</b> = <b>d</b>, i.e., the starting residual should equal the starting step direction.</li>
+            <li>Compute the squared magnitude of the residual: <i>&sigma;</i> = <b>r</b> &middot; <b>r</b>.</li>
+            <li>Set the threshold for how close we want to get to the ideal solution, <i>tolerance</i> = 10<sup>-6</sup> &middot; <i>&sigma;</i>.</li>
+            <li>Repeat until 1000 steps are taken or <i>&sigma;</i> &leq; <i>tolerance</i>:
+              <ul>
+                <li>Set the matrix-mapped step direction to be <b>q</b> = <i>A</i><b>d</b>.</li>
+                <li>Set the step size, <i>&alpha;</i> = <i>&sigma;</i> / <b>d</b> &middot; <b>q</b>.</li>
+                <li>Move to the new solution guess, <b>p</b> += <i>&alpha;</i><b>d</b>.</li>
+                <li>Compute the new residual, <b>r</b> -= <i>&alpha;</i><b>q</b>.</li>
+                <li>Save a copy of the old residual's magnitude, <i>&sigma;</i><sub>old</sub> = <i>&sigma;</i>.</li>
+                <li>Compute the squared magnitude of the new residual, <i>&sigma;</i> = <b>r</b> &middot; <b>r</b>.</li>
+                <li>Compute how small the new residual is relative to the old one, <i>&beta;</i> = <i>&sigma;</i> / <i>&sigma;</i><sub>old</sub>.</li>
+                <li>Set the new step direction based on the old step direction: <b>d</b> = <b>r</b> + <i>&beta;</i><b>d</b>.</li>
+              </ul>
+            </li>
+          </ul>
+          </p>
+          <h2 id="Implementing_Pressure_Projection">Implementing Pressure Projection</h2>
+          <p>Now we have all the steps in place for handling the pressure gradient term of the Euler momentum equation: compute the scaled, flipped divergences of our fluid's grid velocities, use the Conjugate Gradient Algorithm to compute pressure values that minimize the divergence of an updated grid velocities, and then subtract the resulting pressure gradient (for all non-SOLID grid cells) to obtain the new grid velocities.</p>
+          <p>Before we apply the Conjugate Gradient Algorithm though, we need a way to compute the effect of multiplying pressures by the matrix <i>A</i> without actually storing that matrix: it's sparse and huge, so we can compute it more efficiently if we just compute and store information on neighbors of fluid grid cells so we know what numbers to use for each row of the matrix.</p>
+          <p>Exactly what do we need to know about grid cells' neighbors? First, since we're only interested in fluid grid cells, we can skip all the cells on the outer boundary of our grid on all sides, since those are all cells marked as SOLID. So, we can restrict ourselves to the grid cells with indices (<i>i</i>, <i>j</i>, <i>k</i>) where 1 &leq; <i>i</i> &leq; <i>n<sub>x</sub></i> - 1, 1 &leq; <i>j</i> &leq; <i>n<sub>y</sub></i> - 1, and 1 &leq; <i>k</i> &leq; <i>n<sub>z</sub></i> - 1. We can also skip any grid cell that is not labeled as FLUID. For each remaining cell, look at its six neighbors above, below, left, right, behind, and in front of the cell. First, count how many of those six neighbors are either marked as FLUID or EMPTY themselves. Second, we want to remember which of these six neighbors is actually FLUID, and not EMPTY. Why do we need this information? Because we will use it to "multiply a vector by the matrix <i>A</i>" without actually storing <i>A</i> itself or doing any actual matrix multiplication: for each cell (<i>i</i>, <i>j</i>, <i>k</i>), if the cell has no fluid or empty neighbors, we'll skip it entirely; otherwise, we'll multiply the (not-stored-anywhere) matrix <i>A</i> times a vector <b>d</b> by first multiplying by the entry for cell (<i>i</i>, <i>j</i>, <i>k</i>) in the vector <b>d</b> by the number of the cell's non-SOLID neighbors (this corresponds to the number 6 we showed in the <i>A</i> matrix example earlier for any cell that has all 6 neighbor cells being non-SOLID) and then subtracting the entry for each FLUID neighbor cell in the vector <b>d</b> (this corresponds to each -1 entry in a row of the matrix <i>A</i>).</p>
+          <p>Okay, but how shall we store all this data? Keeping count of the neighbors of each cell as well as keeping track of up to 6 neighbors of each cell in the entire grid seems like a lot of data to store! Well, we can use bit manipulation to minimize storage. Since we can have up to six non-SOLID neighbors of any given grid cell, well, the number 6 is 110 in binary, so we need three bits to store the number of non-SOLID neighbors of a grid cell. Then, for each of those six neighbors, we want to store a single bit that is 1 if that neighbor cell is FLUID, and 0 otherwise. So that's one bit for each of the six neighbors, so six more bits we need to store. So, we need to store a total of three bits for the number of non-SOLID neighbors of a cell and six bits for the number of FLUID neighbors, so that's 3 + 6 = 9 bits total that we need to store. Now, we could store all of this information for all grid cells in our entire grid by creating a 3D array of a 9-bit <code>std::bitset</code> object, but to keep things simple and avoid possible overhead from using another data structure just for this, let's just store this as a 3D array of integers that can store at least 9 bits. There is no built-in 9-bit integer data type in C++, so we use the smallest built-in integer type that contains 9 bits, which is the 16-bit unsigned integer type, <code>uint16_t</code>:</p>
+          <p><img src="NeighborsBits1.png" style="border-style: none;" class="center"></img></p>
+          <p>Here is a diagram of where those neighbor cells are relative to the cell (<i>i</i>, <i>j</i>, <i>k</i>), which is the unlabeled cell in the middle:</p>
+          <p><img src="NeighborsBits2.png" style="border-style: none;" class="center"></img></p>
+          <p>As an example, if the fluid cell at index (3, 5, 2) has six fluid cell neighbors, the entry in this 3D array <code>neighbors</code> at index (3, 5, 2) will look like this:</p>
+          <p><img src="NeighborsBits3.png" style="border-style: none;" class="center"></img></p>
+          <p>On the other hand, if the fluid cell at index (5, 0, 18) has three fluid neighbors on its right, above it, and to its left, two empty neighbors below it and in front of it, and a solid neighbor behind it, the entry in this 3D array <code>neighbors</code> at index (5, 0, 18) will look like this:</p>
+          <p><img src="NeighborsBits4.png" style="border-style: none;" class="center"></img></p>
+          <p>And that's it! So, just storing and updating these 9 bits of information for each grid cell in each time step allows us to multiply the giant, sparse matrix <i>A</i> by any vector without ever storing the array anywhere or doing any fancy matrix multiplications! We just iterate through all the grid cells, count neighbors, and multiply and subtract some stuff, and we're done!</p>
+          <p>And with that, here is our implementation of pressure projection! [FILE LINKS COMING SOON]</p>
           <h1 id="Visualizing_Fluid_Animation">Visualizing the Fluid Animation</h1>
           <p>COMING SOON</p>
           <h1 id="The_End_Result">The End Result</h1>
