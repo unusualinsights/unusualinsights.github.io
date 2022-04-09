@@ -86,6 +86,7 @@
         <li><a href="#Visualizing_Fluid_Animation">Visualizing the Fluid Animation</a></li>
         <li><a href="#The_End_Result">The End Result</a></li>
         <li><a href="#Debugging_a_Fluid_Simulation">Debugging a Fluid Simulation</a></li>
+        <li><a href="#Story_of_a_Fluid">The Story of a Fluid</a></li>
       </ul>
       <br>
       <br>
@@ -1334,6 +1335,10 @@ pos = -0.095 -0.025  0.005, vel = 0 0 0
           <p style="font-size: 10px;">Video of the noisy simulation that results when the FLIP ratio is set to 1.0.</p>
           <p>It turned out that Bargteil and Shinar's code was actually using the default FLIP ratio of 0.95 instead of the 1.0 value in the input file. So, my simulation was actually doing exactly what it should! I just needed to alter the FLIP ratio to be 0.95 instead of 1.0, which I altered directly in the input file. I figured this out by shifting my strategy from poring over data to instead making a copy of Bargteil and Shinar's code and step-by-step, modifying it to become more and more like mine, re-running and visualizing their simulation over and over until theirs did the same weird thing as mine. The most efficient way to have figured out this discrepancy would have been to print out the simulation parameters stored in the program after reading from the file, rather than simply comparing the input <code>fluid.json</code> files, which were identical. It turned out that "weird thing" was just that my simulation was a full FLIP (i.e., no PIC) simulation, meaning it was very noisy, i.e., overly "bouncy." This matches what many experts have found in practice: a "mostly-FLIP" simulation works best, since it captures the general "bounciness" of fluids while damping out the unrealistic extra-noisy bounciness of a full FLIP simulation by adding in just a little bit of PIC's damping influence to filter out the excessive bouncy noise. All of this happens in the grid-to-particle update we described as the last substantive part of each time step of our simulation.</p>
           <p>The moral of the story is, it can take a long time to track down issues in a fluid simulation due to the large number of interacting values. However, the solution is to examine data systematically from the beginning to the end to make sure what you think is happening, is what is actually happening in your code at each stage. Try to start at a high level, i.e., checking a few key values at a few key points. Then, if you notice something off at a particular key point in your code's execution, then try to dig into more detail in the relevant portion of your code to track down bugs.</p>
+          <h2 id="Story_of_a_Fluid">The Story of a Fluid</h2>
+          <p><img src="BasicFluidAnimation_J.gif" class="centeropengl"></img></p>
+          <p style="font-size: 10px;">Video made using the FLIP solver we implemented in this tutorial.</p>
+          <p>Every animation tells a story. So, what is the story of an animation of a physics-based fluid simulation? By visualizing a fluid simulation and examining the values of variables as they evolve throughout a simulation, we'll see that a fluid simulation is not really just a bunch of values updated by equations. There is more of a story to it. First, gravity overpowers our giant ball of fluid particles and pulls it downward. The boundaries of our fluid grid "container" cause fluid particles to pile up near the bottom of the grid. The pressure gradient forces then cause the fluid particles to push against each other and form waves and splashes as the fluid gradually settles into a fluid layer at the bottom of the imaginary fluid container.</p>
     </div>
   </body>
 </html>
